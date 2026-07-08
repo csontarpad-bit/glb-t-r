@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>Quarantine City Mobile</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
+</head>
+<body>
+    <div id="damage-flash"></div>
+    <div id="heal-flash"></div>
+
+    <div id="ui-layer">
+       <div id="radar">
+    <div class="radar-center"></div>
+    <div class="radar-scanner"></div> </div>
+        
+        <div id="health-bar-container"><div id="health-fill"></div></div>
+        
+        <div id="score-display">PONT: 0</div>
+        
+        <div id="crosshair"><div class="crosshair-center"></div></div>
+        
+		<div id="hitmarker" class="hidden"></div>
+        <div id="headshot-msg" class="hidden">FEJLÖVÉS! 💀</div>
+        <div id="screen-blood" style="opacity: 0;"></div>
+		
+        <div id="ammo-display">[ 10 / 30 ]</div>
+        <button id="shoot-btn">💥</button>
+        
+        <div id="zone-left"></div>
+        <div id="zone-right"></div>
+        <div id="joy-base" class="hidden"><div id="joy-stick"></div></div>
+        
+        <canvas id="weapon-canvas"></canvas>
+    </div>
+
+    <div id="wave-display" class="hidden">1. HULLÁM</div>
+    <div id="reload-text" class="hidden">ÚJRATÖLTÉS...</div>
+
+    <div id="game-over" class="hidden">
+        <h1>MEGHALTÁL</h1>
+        <p id="final-score">PONT: 0</p>
+        <p id="final-wave">TÚLÉLT HULLÁMOK: 0</p>
+        <button id="restart-btn">ÚJRAINDÍTÁS</button>
+    </div>
+
+    <script src="engine.js"></script>
+</body>
+</html>
