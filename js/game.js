@@ -6,6 +6,9 @@ scene.background = new THREE.Color(0x051a05); // Radioaktív zöldes fekete
 scene.fog = new THREE.FogExp2(0x051a05, 0.035);
 
 camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.01, 1000);
+// ÚJ SOR: Azonnal felemeljük a kamerát szemmagasságba, így látod a pályát amíg töltenek a zombik!
+camera.position.set(0, 1.6, 0); 
+
 clock = new THREE.Clock();
 
 renderer = new THREE.WebGLRenderer({ antialias: true });
