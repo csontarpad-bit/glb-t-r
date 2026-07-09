@@ -669,7 +669,7 @@ for (let i = ammoBoxes.length - 1; i >= 0; i--) {
     camera.position.z = Math.max(-playerLimit, Math.min(playerLimit, camera.position.z));
     
     renderer.render(scene, camera);
-}
+
 
 const shootBtn = document.getElementById('shoot-btn');
 if(shootBtn) {
