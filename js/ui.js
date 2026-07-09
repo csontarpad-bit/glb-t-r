@@ -86,6 +86,16 @@ function handleWeaponSwitch(e) {
 
 document.getElementById('start-game-btn').addEventListener('click', (e) => {
     e.preventDefault();
+    
+    // --- ÚJ: Teljes képernyő (Fullscreen) kérése ---
+    let elem = document.documentElement;
+    if (elem.requestFullscreen) {
+        elem.requestFullscreen().catch(err => console.log("Fullscreen hiba:", err));
+    } else if (elem.webkitRequestFullscreen) { /* Safari / iOS mobilos támogatás */
+        elem.webkitRequestFullscreen();
+    }
+    // ------------------------------------------------
+    
     currentDifficulty = document.getElementById('difficulty-select').value;
     document.getElementById('main-menu').classList.add('hidden');
     document.getElementById('game-ui-wrapper').classList.remove('hidden');
