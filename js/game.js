@@ -684,6 +684,13 @@ function resizeGame() {
         camera.updateProjectionMatrix();
         // Frissítjük a renderelő felbontását az új, immár teljes képernyős méretre
         renderer.setSize(window.innerWidth, window.innerHeight);
+
+        // ÚJ: Kényszerítjük a UI konténert, hogy pixelre pontosan egyezzen a játéktérrel
+        const uiWrapper = document.getElementById('game-ui-wrapper');
+        if (uiWrapper) {
+            uiWrapper.style.width = window.innerWidth + 'px';
+            uiWrapper.style.height = window.innerHeight + 'px';
+        }
     }
 }
 
