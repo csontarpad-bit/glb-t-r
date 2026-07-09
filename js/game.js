@@ -675,16 +675,24 @@ if(shootBtn) {
 }
 
 // ==========================================
-// KÉPERNYŐ ÁTMÉRETEZÉSÉNEK KEZELÉSE (Képarány javítása)
+// KÉPERNYŐ ÁTMÉRETEZÉSÉNEK KEZELÉSE (Képarány és célkereszt javítása)
 // ==========================================
-window.addEventListener('resize', () => {
+function resizeGame() {
     if (camera && renderer) {
         // Frissítjük a kamera képarányát
         camera.aspect = window.innerWidth / window.innerHeight;
-        // Újraszámoljuk a projekciós mátrixot (ez szünteti meg a dőlést/torzulást)
         camera.updateProjectionMatrix();
-        // Frissítjük a renderelő felbontását az új méretre
+        // Frissítjük a renderelő felbontását az új, immár teljes képernyős méretre
         renderer.setSize(window.innerWidth, window.innerHeight);
     }
-});
+}
+
+// Alap átméretezés figyelése
+window.addEventListener('resize', resizeGame);
+
+// ÚJ: Külön figyeljük a teljes képernyős váltást, és adunk neki egy kis időt (200ms), 
+// amíg a mobil animációja befejeződik, mielőtt újraszámolnánk a pontos méreteket és a lövés irányát.
+document.addEventListener('fullscreenchange', () => setTimeout(resizeGame, 200));
+document.addEventListener('webkitfullscreenchange', () => setTimeout(resizeGame, 200));
+
 animate();
