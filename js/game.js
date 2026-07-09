@@ -663,6 +663,11 @@ for (let i = ammoBoxes.length - 1; i >= 0; i--) {
         } 
     }
 
+// --- JÁTÉKOS POZÍCIÓJÁNAK KORLÁTOZÁSA (Falba lökés ellen) ---
+    const playerLimit = 23.5; // A fal belső síkja. (Így a kamera nem mehet át rajta)
+    camera.position.x = Math.max(-playerLimit, Math.min(playerLimit, camera.position.x));
+    camera.position.z = Math.max(-playerLimit, Math.min(playerLimit, camera.position.z));
+    
     renderer.render(scene, camera);
 }
 
