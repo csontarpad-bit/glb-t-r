@@ -21,7 +21,6 @@ function spawnEnemy(x, z, isBoss = false) {
     else if (rand < 0.25) type = 'tank';
     else if (rand < 0.35) type = 'hider';
 
-    // ÚJ: Megfelelő modell és animációk kiválasztása
     let baseModel = zombieModel;
     let anims = zombieAnimations;
     
@@ -35,12 +34,12 @@ function spawnEnemy(x, z, isBoss = false) {
 
     const mesh = THREE.SkeletonUtils.clone(baseModel);
     
-    // Alapértékek és JUTALMAK (Reward) típus alapján
-    let scale = 1.5, hpMult = 1, speedMult = 1, opacity = 1, reward = 20;
-    if (type === 'runner') { scale = 1.5; hpMult = 0.5; speedMult = 2.5; reward = 30; } 
-    else if (type === 'tank') { scale = 2.5; hpMult = 4.0; speedMult = 0.6; reward = 100; } 
-    else if (type === 'boss') { scale = 4.0; hpMult = 15.0; speedMult = 0.5; reward = 500; } 
-    else if (type === 'hider') { scale = 0.02; hpMult = 0.8; speedMult = 1.3; opacity = 0.2; reward = 40; } 
+    // ÚJ: hitboxScale - A találati zóna logikai mérete a játéktérben
+    let scale = 1.5, hpMult = 1, speedMult = 1, opacity = 1, reward = 20, hitboxScale = 1.0;
+    if (type === 'runner') { scale = 1.0; hpMult = 0.5; speedMult = 2.5; reward = 30; hitboxScale = 0.8; } 
+    else if (type === 'tank') { scale = 2.5; hpMult = 4.0; speedMult = 0.6; reward = 100; hitboxScale = 1.8; } 
+    else if (type === 'boss') { scale = 4.0; hpMult = 15.0; speedMult = 0.5; reward = 500; hitboxScale = 2.5; } 
+    else if (type === 'hider') { scale = 0.02; hpMult = 0.8; speedMult = 1.3; opacity = 0.2; reward = 40; hitboxScale = 0.8; } 
 
     mesh.scale.set(scale, scale, scale); 
     mesh.position.set(x, 0, z); 
@@ -56,19 +55,26 @@ function spawnEnemy(x, z, isBoss = false) {
         }
     });
     
-    const bodyHitbox = new THREE.Mesh(new THREE.BoxGeometry(0.8 * (scale/1.5), 1.3 * (scale/1.5), 0.8 * (scale/1.5)), new THREE.MeshBasicMaterial({ visible: false })); 
-    bodyHitbox.position.y = 0.65 * (scale/1.5); bodyHitbox.userData = { type: 'body' };
+    // ÚJ: Hitbox matematika
+    // Ezzel az osztással visszaszámoljuk a 3D modell torzítását, így a hitbox fix méretű marad.
+    const inv = hitboxScale / scale;
     
-    const headHitbox = new THREE.Mesh(new THREE.BoxGeometry(0.5 * (scale/1.5), 0.5 * (scale/1.5), 0.5 * (scale/1.5)), new THREE.MeshBasicMaterial({ visible: false }));
-    headHitbox.position.y = 1.6 * (scale/1.5); headHitbox.userData = { type: 'head' }; 
+    // A test (body) és fej (head) dobozok pontos elhelyezése
+    const bodyHitbox = new THREE.Mesh(new THREE.BoxGeometry(1.0 * inv, 1.4 * inv, 1.0 * inv), new THREE.MeshBasicMaterial({ visible: false })); 
+    bodyHitbox.position.y = 0.7 * inv; 
+    bodyHitbox.userData = { type: 'body' };
+    
+    const headHitbox = new THREE.Mesh(new THREE.BoxGeometry(0.6 * inv, 0.6 * inv, 0.6 * inv), new THREE.MeshBasicMaterial({ visible: false }));
+    headHitbox.position.y = 1.7 * inv; 
+    headHitbox.userData = { type: 'head' }; 
 
-    mesh.add(bodyHitbox); mesh.add(headHitbox); 
+    mesh.add(bodyHitbox); 
+    mesh.add(headHitbox); 
     scene.add(mesh); 
     enemyHitboxes.push(bodyHitbox, headHitbox); 
     
     const mixer = new THREE.AnimationMixer(mesh);
     
-    // ÚJ: Specifikus animáció keresése típus alapján
     let walkClip = null;
     if (anims && anims.length > 0) {
         if (type === 'runner') {
@@ -101,6 +107,7 @@ function spawnEnemy(x, z, isBoss = false) {
         mixer, blip 
     });
 }
+
 
 function spawnMedkit(x, z) {
     if (!healthModel) return; 
