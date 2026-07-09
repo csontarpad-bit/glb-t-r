@@ -673,7 +673,7 @@ for (let i = ammoBoxes.length - 1; i >= 0; i--) {
     
     renderer.render(scene, camera);
 
-
+}
 const shootBtn = document.getElementById('shoot-btn');
 if(shootBtn) {
     shootBtn.addEventListener('touchstart', (e) => { e.preventDefault(); isShootingBtnPressed = true; handleShoot(e); });
