@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>Quarantine City Mobile</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
+</head>
+<body>
+    <div id="main-menu">
+        <h1>QUARANTINE CITY</h1>
+        <p id="high-score-display">LEGJOBB PONT: 0</p>
+        <div class="menu-options">
+            <label>Nehézség:</label>
+            <select id="difficulty-select">
+                <option value="easy">Könnyű</option>
+                <option value="medium" selected>Normál</option>
+                <option value="hard">Nehéz</option>
+            </select>
+        </div>
+        <button id="start-game-btn">JÁTÉK INDÍTÁSA</button>
+    </div>
+
+    <div id="shop-menu" class="hidden">
+        <h2>BOLT (Két hullám között)</h2>
+        <p>Pontjaid (Pénz): <span id="shop-points">0</span></p>
+        <div class="shop-grid">
+            <button id="buy-health" class="shop-btn">Élet Maxolása<br>(100 P)</button>
+            <button id="buy-armor" class="shop-btn">Páncél +50<br>(200 P)</button>
+            <button id="buy-ammo" class="shop-btn">Lőszer (Aktuális fegyverbe)<br>(50 P)</button>
+            <button id="buy-shotgun" class="shop-btn">Sörétes Puska<br>(500 P)</button>
+            <button id="buy-rifle" class="shop-btn">Gépkarabély<br>(1000 P)</button>
+            <button id="buy-super" class="shop-btn">Szuper fegyver<br>(5000 P)</button>
+        </div>
+        <button id="close-shop-btn">VISSZA A HARCBA</button>
+    </div>
+
+    <div id="game-ui-wrapper" class="hidden">
+        <div id="damage-flash"></div>
+        <div id="heal-flash"></div>
+        <div id="ammo-flash"></div> <div id="ui-layer">
+
+        <div id="ui-layer">
+           <div id="radar"><div class="radar-center"></div><div class="radar-scanner"></div></div>
+            
+            <div id="health-bar-container">
+                <div id="health-fill"></div>
+                <div id="armor-fill" style="width: 0%;"></div> </div>
+            <div id="score-display">PÉNZ: 0</div>
+            <div id="crosshair"><div class="crosshair-center"></div></div>
+            
+            <div id="hitmarker" class="hidden"></div>
+            <div id="headshot-msg" class="hidden">FEJLÖVÉS! 💀</div>
+            <div id="screen-blood" style="opacity: 0;"></div>
+            
+            <button id="switch-weapon-btn">🔄 VÁLTÁS</button>
+            <div id="weapon-info-display">Pisztoly</div>
+            <div id="ammo-display">[ 10 / 30 ]</div>
+            
+            <button id="shoot-btn">💥</button>
+            
+            <div id="zone-left"></div>
+            <div id="zone-right"></div>
+            <div id="joy-base" class="hidden"><div id="joy-stick"></div></div>
+        </div>
+
+        <div id="wave-display" class="hidden">1. HULLÁM</div>
+        <div id="reload-text" class="hidden">ÚJRATÖLTÉS...</div>
+    </div>
+
+    <div id="game-over" class="hidden">
+        <h1>MEGHALTÁL</h1>
+        <p id="final-score">PONT: 0</p>
+        <p id="final-wave">TÚLÉLT HULLÁMOK: 0</p>
+        <button id="restart-btn">VISSZA A MENÜBE</button>
+    </div>
+
+    <script src="js/state.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/entities.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>
