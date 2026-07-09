@@ -380,11 +380,18 @@ window.startWaveCountdown = function() {
 }
 
 window.startGame = function() {
-    // EZ A SOR VÁLTOZOTT: Most már megvárja az élet és a lőszer modelleket is!
-if (!zombieModel || !ammoModel || !healthModel || !fastZombieModel || !hiderZombieModel) { 
+    if (!zombieModel || !ammoModel || !healthModel || !fastZombieModel || !hiderZombieModel) { 
         setTimeout(window.startGame, 500); 
         return; 
     }
+    
+    // --- ÚJ: Garantáljuk, hogy minden fizikai változó valós szám legyen induláskor ---
+    window.moveX = 0; window.moveZ = 0; 
+    window.pitch = 0; window.yaw = 0; 
+    window.recoilPitch = 0; window.cameraShake = 0; 
+    window.baseCamY = 1.6; window.velocityY = 0; window.gravity = 0.005;
+    if (camera) camera.position.set(0, baseCamY, 0);
+    // ---------------------------------------------------------------------------------
     
     gameState = 'PLAYING'; 
     playerHealth = 100; 
@@ -397,7 +404,7 @@ if (!zombieModel || !ammoModel || !healthModel || !fastZombieModel || !hiderZomb
     weapons.pistol.ammo = weapons.pistol.maxAmmo; 
     weapons.pistol.reserve = weapons.pistol.maxReserve;
     
-    if (typeof updateUI === 'function') updateUI(); 
+    if (typeof updateUI === 'function') updateUI();
     camera.position.set(0, baseCamY, 0);
     
     // Pálya takarítás
@@ -666,13 +673,18 @@ for (let i = ammoBoxes.length - 1; i >= 0; i--) {
         } 
     }
 
-// --- JÁTÉKOS POZÍCIÓJÁNAK KORLÁTOZÁSA (Falba lökés ellen) ---
+    // --- ÚJ: Biztonsági háló NaN mérgezés ellen (Ha elszáll a matek, visszatesz középre) ---
+    if (isNaN(camera.position.x) || isNaN(camera.position.y) || isNaN(camera.position.z)) {
+        camera.position.set(0, 1.6, 0);
+    }
+    // --------------------------------------------------------------------------------------
+
+    // --- JÁTÉKOS POZÍCIÓJÁNAK KORLÁTOZÁSA (Falba lökés ellen) ---
     const playerLimit = 23.5; // A fal belső síkja. (Így a kamera nem mehet át rajta)
     camera.position.x = Math.max(-playerLimit, Math.min(playerLimit, camera.position.x));
     camera.position.z = Math.max(-playerLimit, Math.min(playerLimit, camera.position.z));
     
     renderer.render(scene, camera);
-
 }
 const shootBtn = document.getElementById('shoot-btn');
 if(shootBtn) {
