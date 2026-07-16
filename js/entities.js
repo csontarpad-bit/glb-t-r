@@ -108,7 +108,6 @@ function spawnEnemy(x, z, isBoss = false) {
     });
 }
 
-
 function spawnMedkit(x, z) {
     if (!healthModel) return; 
     const mesh = THREE.SkeletonUtils.clone(healthModel); mesh.position.set(x, 1, z); 
