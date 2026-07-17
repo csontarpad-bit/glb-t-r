@@ -75,7 +75,10 @@ loadSound('zombieDie', 'https://raw.githubusercontent.com/csontarpad-bit/glb-t-r
 
 window.unlockAudio = function() {
     if (listener.context.state === 'suspended') listener.context.resume();
-    if (sounds['music'] && !sounds['music'].isPlaying && sounds['music'].buffer) sounds['music'].play();
+    // Biztonságosabb ellenőrzés a betöltés elcsúszása ellen
+    if (sounds['music'] && sounds['music'].buffer && !sounds['music'].isPlaying) {
+        sounds['music'].play();
+    }
 }
 
 window.playSound = function(name, offset = 0) {
@@ -315,9 +318,24 @@ window.handleShoot = function(e) {
 
 // Joypad Touch Eventek
 const zoneLeft = document.getElementById('zone-left'), zoneRight = document.getElementById('zone-right');
+const joyBase = document.getElementById('joy-base'), joyStick = document.getElementById('joy-stick');
 let leftTouchId = null, rightTouchId = null, joyStartX = 0, joyStartY = 0, lastLookX = 0, lastLookY = 0;
 
-zoneLeft.addEventListener('touchstart', (e) => { e.preventDefault(); leftTouchId = e.changedTouches[0].identifier; joyStartX = e.changedTouches[0].clientX; joyStartY = e.changedTouches[0].clientY; });
+zoneLeft.addEventListener('touchstart', (e) => { 
+    e.preventDefault(); 
+    leftTouchId = e.changedTouches[0].identifier; 
+    joyStartX = e.changedTouches[0].clientX; 
+    joyStartY = e.changedTouches[0].clientY; 
+    
+    // Joystick megjelenítése az ujj alatt
+    joyBase.classList.remove('hidden');
+    joyBase.style.left = joyStartX + 'px';
+    joyBase.style.top = joyStartY + 'px';
+    joyStick.style.left = '50%';
+    joyStick.style.top = '50%';
+    joyStick.style.transform = `translate(-50%, -50%)`;
+});
+
 zoneLeft.addEventListener('touchmove', (e) => { 
     e.preventDefault(); 
     for (let touch of e.changedTouches) { 
@@ -325,12 +343,29 @@ zoneLeft.addEventListener('touchmove', (e) => {
             const dx = touch.clientX - joyStartX; 
             const dy = touch.clientY - joyStartY; 
             const angle = Math.atan2(dy, dx); 
-            moveX = Math.cos(angle); 
-            moveZ = Math.sin(angle); 
+            
+            // Távolság kiszámítása, max 40 pixel (analóg érzékelés)
+            let distance = Math.min(Math.hypot(dx, dy), 40);
+            let speedMultiplier = distance / 40; 
+            
+            moveX = Math.cos(angle) * speedMultiplier; 
+            moveZ = Math.sin(angle) * speedMultiplier; 
+            
+            // Kis joystick vizuális mozgatása a kereten belül
+            let stickX = Math.cos(angle) * distance;
+            let stickY = Math.sin(angle) * distance;
+            joyStick.style.transform = `translate(calc(-50% + ${stickX}px), calc(-50% + ${stickY}px))`;
         } 
     } 
 });
-zoneLeft.addEventListener('touchend', (e) => { if (e.changedTouches[0].identifier === leftTouchId) { leftTouchId = null; moveX = moveZ = 0; } });
+
+zoneLeft.addEventListener('touchend', (e) => { 
+    if (e.changedTouches[0].identifier === leftTouchId) { 
+        leftTouchId = null; 
+        moveX = moveZ = 0; 
+        joyBase.classList.add('hidden'); // Joystick elrejtése
+    } 
+});
 
 zoneRight.addEventListener('touchstart', (e) => { e.preventDefault(); rightTouchId = e.changedTouches[0].identifier; lastLookX = e.changedTouches[0].clientX; lastLookY = e.changedTouches[0].clientY; });
 zoneRight.addEventListener('touchmove', (e) => { 
@@ -452,10 +487,12 @@ function animate() {
         return; 
     }
 
-    // 2. Automata tüzelés logikája (ezt szúrd be ide)
+// 2. Automata tüzelés logikája
     let wpn = weapons[currentWeaponId];
+    
+    if (autoShootTimer > 0) autoShootTimer -= delta;
+
     if (isShootingBtnPressed && wpn.auto) {
-        autoShootTimer -= delta;
         if (autoShootTimer <= 0) {
             handleShoot();
             autoShootTimer = wpn.fireRate;
@@ -696,9 +733,18 @@ for (let i = ammoBoxes.length - 1; i >= 0; i--) {
 }
 const shootBtn = document.getElementById('shoot-btn');
 if(shootBtn) {
-    shootBtn.addEventListener('touchstart', (e) => { e.preventDefault(); isShootingBtnPressed = true; handleShoot(e); });
+    shootBtn.addEventListener('touchstart', (e) => { 
+        e.preventDefault(); 
+        isShootingBtnPressed = true; 
+        if(weapons[currentWeaponId].auto) autoShootTimer = weapons[currentWeaponId].fireRate;
+        handleShoot(e); 
+    });
     shootBtn.addEventListener('touchend', (e) => { e.preventDefault(); isShootingBtnPressed = false; });
-    shootBtn.addEventListener('mousedown', () => { isShootingBtnPressed = true; handleShoot(); });
+    shootBtn.addEventListener('mousedown', () => { 
+        isShootingBtnPressed = true; 
+        if(weapons[currentWeaponId].auto) autoShootTimer = weapons[currentWeaponId].fireRate;
+        handleShoot(); 
+    });
     shootBtn.addEventListener('mouseup', () => { isShootingBtnPressed = false; });
 }
 
