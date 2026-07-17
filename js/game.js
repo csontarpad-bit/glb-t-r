@@ -104,9 +104,17 @@ window.playHitmarkerSound = function() {
 // 3. PÁLYA ÉS MODELLEK BETÖLTÉSE
 // ==========================================
 const textureLoader = new THREE.TextureLoader(); 
-const floorTex = textureLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/6ff430b224fb8cd358b83fade1e06710d708d094/1783431196560.png'); 
+const floorTex = textureLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/6ff430b224fb8cd358b83fade1e06710d708d094/1783431196560.png',
+    undefined, 
+    undefined, 
+    (err) => console.error('Hiba a padló textúra betöltése közben:', err)
+); 
 floorTex.wrapS = THREE.RepeatWrapping; floorTex.wrapT = THREE.RepeatWrapping; floorTex.repeat.set(10, 10); 
-const wallTex = textureLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/6ff430b224fb8cd358b83fade1e06710d708d094/1783431502863.png'); 
+const wallTex = textureLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/6ff430b224fb8cd358b83fade1e06710d708d094/1783431502863.png',
+    undefined,
+    undefined,
+    (err) => console.error('Hiba a fal textúra betöltése közben:', err)
+); 
 wallTex.wrapS = THREE.RepeatWrapping; wallTex.wrapT = THREE.RepeatWrapping; wallTex.repeat.set(4, 1); 
 
 const floorMat = new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.9, metalness: 0.1 }); 
@@ -157,29 +165,29 @@ gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/8c7271
         gunShootAction.setLoop(THREE.LoopOnce); 
         gunShootAction.clampWhenFinished = true; 
     } 
-});
+}, undefined, (error) => console.error('Hiba a fegyver modell betöltése közben:', error));
 
 // Zombi, Ammo, Health modellek
 gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/main/zombie.glb', (gltf) => { 
     zombieModel = gltf.scene; 
     zombieAnimations = gltf.animations; 
     zombieModel.traverse((c) => { if(c.isMesh) c.frustumCulled = false; }); 
-});
+}, undefined, (error) => console.error('Hiba a zombi modell betöltése közben:', error));
 
 gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/6aa130a4c148ae5e16855905c4a15b9978e974ee/Fast%20zombie.glb', (gltf) => { 
     fastZombieModel = gltf.scene; 
     fastZombieAnimations = gltf.animations; 
     fastZombieModel.traverse((c) => { if(c.isMesh) c.frustumCulled = false; }); 
-});
+}, undefined, (error) => console.error('Hiba a gyors zombi modell betöltése közben:', error));
 // Hider Zombi
 gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/6aa130a4c148ae5e16855905c4a15b9978e974ee/hider%20zombie.glb', (gltf) => { 
     hiderZombieModel = gltf.scene; 
     hiderZombieAnimations = gltf.animations; 
     hiderZombieModel.traverse((c) => { if(c.isMesh) c.frustumCulled = false; }); 
-});
+}, undefined, (error) => console.error('Hiba a hider zombi modell betöltése közben:', error));
 
-gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/db069dbbe97f2d9cd71985c37eb64dad31848434/ammo.glb', (gltf) => { ammoModel = gltf.scene; });
-gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/db069dbbe97f2d9cd71985c37eb64dad31848434/health.glb', (gltf) => { healthModel = gltf.scene; });
+gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/db069dbbe97f2d9cd71985c37eb64dad31848434/ammo.glb', (gltf) => { ammoModel = gltf.scene; }, undefined, (error) => console.error('Hiba az ammo modell betöltése közben:', error));
+gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/db069dbbe97f2d9cd71985c37eb64dad31848434/health.glb', (gltf) => { healthModel = gltf.scene; }, undefined, (error) => console.error('Hiba a health modell betöltése közben:', error));
 
 // Vérfolt generátor
 function createBloodStain(x, z) {
