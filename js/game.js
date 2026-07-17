@@ -446,13 +446,6 @@ function animate() {
     requestAnimationFrame(animate); 
     const delta = clock.getDelta();
 
-window.pitch = window.pitch || 0;
-    window.yaw = window.yaw || 0;
-    window.moveX = window.moveX || 0;
-    window.moveZ = window.moveZ || 0;
-    window.recoilPitch = window.recoilPitch || 0;
-    window.cameraShake = window.cameraShake || 0;
-    
     // 1. Állapotellenőrzés
     if (gameState !== 'PLAYING') { 
         renderer.render(scene, camera); 
