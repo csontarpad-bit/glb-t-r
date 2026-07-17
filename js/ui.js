@@ -35,7 +35,9 @@ function buyItem(cost, action) {
         shopPoints.innerText = score;
         if(typeof updateUI === 'function') updateUI();
     } else {
-        alert("Nincs elég pénzed!");
+        // Vizuális hibaüzenet: pirosan felvillan a pénzösszeg
+        shopPoints.style.color = '#ff0000';
+        setTimeout(() => shopPoints.style.color = '#ffcc00', 300);
     }
 }
 
