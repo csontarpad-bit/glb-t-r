@@ -8,7 +8,30 @@ const hsMsg = document.getElementById('headshot-msg');
 const shopMenu = document.getElementById('shop-menu');
 const shopPoints = document.getElementById('shop-points');
 
-// --- BOLT LOGIKA ---
+
+// --- ÚJ: BOLT FÜLEK LOGIKÁJA (Védett verzió) ---
+const tabWeaponsBtn = document.getElementById('tab-weapons');
+const tabSkillsBtn = document.getElementById('tab-skills');
+const shopWeaponsDiv = document.getElementById('shop-weapons');
+const shopSkillsDiv = document.getElementById('shop-skills');
+
+if (tabWeaponsBtn && tabSkillsBtn) {
+    tabWeaponsBtn.addEventListener('click', () => {
+        tabWeaponsBtn.classList.add('active');
+        tabSkillsBtn.classList.remove('active');
+        shopWeaponsDiv.classList.remove('hidden');
+        shopSkillsDiv.classList.add('hidden');
+    });
+
+    tabSkillsBtn.addEventListener('click', () => {
+        tabSkillsBtn.classList.add('active');
+        tabWeaponsBtn.classList.remove('active');
+        shopSkillsDiv.classList.remove('hidden');
+        shopWeaponsDiv.classList.add('hidden');
+    });
+}
+
+// --- BOLT MEGNYITÁSA ---
 window.openShop = function() {
     gameState = 'SHOPPING'; // Játék szüneteltetése!
     shopMenu.classList.remove('hidden');
@@ -16,44 +39,132 @@ window.openShop = function() {
 	let bonusText = lastWaveBonus > 0 ? ` (+${lastWaveBonus} Bónusz!)` : '';
     shopPoints.innerText = score + bonusText;
 	
-	
-    document.getElementById('buy-shotgun').disabled = weapons.shotgun.owned;
-    document.getElementById('buy-rifle').disabled = weapons.rifle.owned;
-    document.getElementById('buy-super').disabled = weapons.super.owned;
+    if(typeof updateShopButtons === 'function') updateShopButtons();
 }
 
 document.getElementById('close-shop-btn').addEventListener('click', () => {
     shopMenu.classList.add('hidden');
     gameState = 'PLAYING'; // Játék folytatása
-    if (typeof startWaveCountdown === 'function') startWaveCountdown(); // CSAK MOST indul a 10 másodperc!
+    if (typeof startWaveCountdown === 'function') startWaveCountdown(); 
 });
 
-function buyItem(cost, action) {
-    if (score >= cost) {
-        score -= cost;
-        action();
-        shopPoints.innerText = score;
-        if(typeof updateUI === 'function') updateUI();
+// --- VIZUÁLIS VISSZAJELZÉS ---
+function flashMoneyError() {
+    shopPoints.style.color = '#ff0000';
+    setTimeout(() => shopPoints.style.color = '#ffcc00', 300);
+}
+
+// --- FEGYVER FEJLESZTÉS LOGIKA ---
+function upgradeWeapon(wpnId, basePrice) {
+    let w = weapons[wpnId];
+    let cost = w.owned ? basePrice * w.level : basePrice;
+    
+    if (w.level >= 5 || score < cost) { flashMoneyError(); return; }
+    
+    score -= cost;
+    if (!w.owned) {
+        w.owned = true;
+        w.reserve = w.maxReserve;
     } else {
-        // Vizuális hibaüzenet: pirosan felvillan a pénzösszeg
-        shopPoints.style.color = '#ff0000';
-        setTimeout(() => shopPoints.style.color = '#ffcc00', 300);
+        w.level++;
+        // Bónuszok szintenként:
+        if (w.level === 2) w.maxReserve = Math.floor(w.maxReserve * 1.5);
+        if (w.level === 3) w.reloadTime = Math.floor(w.reloadTime * 0.75);
+        if (w.level === 4) w.maxAmmo = Math.floor(w.maxAmmo * 1.5);
+        if (w.level === 5) w.damage *= 2;
+    }
+    updateShopButtons();
+}
+
+// --- KÉPESSÉG FEJLESZTÉS LOGIKA ---
+function upgradeSkill(skillId) {
+    let s = skills[skillId];
+    let cost = s.baseCost * (s.level + 1);
+    
+    if (s.level >= s.maxLevel || score < cost) { flashMoneyError(); return; }
+    
+    score -= cost;
+    s.level++;
+    
+    // Ha életet fejlesztünk, azonnal gyógyuljunk is a maximumra
+    if (skillId === 'maxHealth') playerHealth = 100 + (skills.maxHealth.level * 20);
+    // Ha fagyasztást veszünk, jelenjen meg a gomb
+    if (skillId === 'freeze' && s.level === 1) document.getElementById('freeze-btn').classList.remove('hidden');
+
+    updateShopButtons();
+}
+
+// --- GOMBOK FRISSÍTÉSE (Menő Sci-Fi Kiosztás) ---
+window.updateShopButtons = function() {
+    let bonusText = lastWaveBonus > 0 ? ` (+${lastWaveBonus} Bónusz!)` : '';
+    shopPoints.innerText = score + bonusText;
+    if(typeof updateUI === 'function') updateUI();
+
+    // Segédfüggvény a szép HTML struktúra generálásához
+    function getBtnHTML(name, stat, price) {
+        return `<div class="item-name">${name}</div><div class="item-stat">${stat}</div><div class="item-price">${price}</div>`;
+    }
+
+    // Lőszer gomb
+    const ammoBtn = document.getElementById('buy-ammo');
+    ammoBtn.innerHTML = getBtnHTML("TÁRAK FELTÖLTÉSE", "Aktuális fegyver max lőszer", "ÁR: 50 CR");
+    ammoBtn.onclick = () => {
+        if (score >= 50) { score -= 50; let w = weapons[currentWeaponId]; w.reserve = w.maxReserve; updateShopButtons(); } 
+        else flashMoneyError();
+    };
+
+    // Fegyverek
+    const wBtns = { shotgun: 'buy-shotgun', rifle: 'buy-rifle', super: 'buy-super' };
+    for (let id in wBtns) {
+        let btn = document.getElementById(wBtns[id]);
+        let w = weapons[id];
+        let base = id === 'shotgun' ? 500 : id === 'rifle' ? 1000 : 5000;
+        
+        if (!w.owned) { 
+            btn.innerHTML = getBtnHTML(w.name, "Állapot: Zárolva", `VÉTEL: ${base} CR`); 
+        } else if (w.level < 5) { 
+            btn.innerHTML = getBtnHTML(w.name, `Szint: ${w.level} ➔ ${w.level+1}`, `FEJLESZTÉS: ${base * w.level} CR`); 
+        } else { 
+            btn.innerHTML = getBtnHTML(w.name, "Állapot: MAX SZINT", "---"); 
+            btn.disabled = true; 
+        }
+        btn.onclick = () => upgradeWeapon(id, base);
+    }
+    
+    // Alap pisztoly
+    let pBtn = document.getElementById('buy-pistol');
+    if (weapons.pistol.level < 5) { 
+        pBtn.innerHTML = getBtnHTML("Pisztoly", `Szint: ${weapons.pistol.level} ➔ ${weapons.pistol.level+1}`, `FEJLESZTÉS: ${200 * weapons.pistol.level} CR`); 
+        pBtn.onclick = () => upgradeWeapon('pistol', 200); 
+    } else { 
+        pBtn.innerHTML = getBtnHTML("Pisztoly", "Állapot: MAX SZINT", "---"); 
+        pBtn.disabled = true; 
+    }
+
+    // Képességek (Külön megnevezések a szebb megjelenésért)
+    const skillNames = { revive: "Újraélesztő Szérum", maxHealth: "Kevlár Implantátum", speed: "Kibernetikus Láb", ammoLoot: "Kibővített Zsebek", healthLoot: "Gyógyító Nanobotok", freeze: "Krio-Gránát (F)" };
+    const sBtns = { revive: 'skill-revive', maxHealth: 'skill-health', speed: 'skill-speed', ammoLoot: 'skill-ammoLoot', healthLoot: 'skill-healthLoot', freeze: 'skill-freeze' };
+    
+    for (let id in sBtns) {
+        let btn = document.getElementById(sBtns[id]);
+        let s = skills[id];
+        let displayName = skillNames[id];
+        
+        if (s.level < s.maxLevel) { 
+            btn.innerHTML = getBtnHTML(displayName, `Fejlettség: ${s.level} / ${s.maxLevel}`, `ÁR: ${s.baseCost * (s.level + 1)} CR`); 
+        } else { 
+            btn.innerHTML = getBtnHTML(displayName, "Állapot: MAX SZINT", "---"); 
+            btn.disabled = true; 
+        }
+        btn.onclick = () => upgradeSkill(id);
     }
 }
 
-document.getElementById('buy-health').addEventListener('click', () => buyItem(100, () => playerHealth = 100));
-document.getElementById('buy-armor').addEventListener('click', () => buyItem(200, () => playerArmor = Math.min(100, playerArmor + 50)));
-document.getElementById('buy-ammo').addEventListener('click', () => buyItem(50, () => {
-    let w = weapons[currentWeaponId];
-    w.reserve = Math.min(w.reserve + w.maxAmmo * 2, w.maxReserve);
-}));
-document.getElementById('buy-shotgun').addEventListener('click', () => buyItem(500, () => { weapons.shotgun.owned = true; weapons.shotgun.reserve = weapons.shotgun.maxReserve; document.getElementById('buy-shotgun').disabled = true; }));
-document.getElementById('buy-rifle').addEventListener('click', () => buyItem(1000, () => { weapons.rifle.owned = true; weapons.rifle.reserve = weapons.rifle.maxReserve; document.getElementById('buy-rifle').disabled = true; }));
-document.getElementById('buy-super').addEventListener('click', () => buyItem(5000, () => { weapons.super.owned = true; weapons.super.reserve = weapons.super.maxReserve; document.getElementById('buy-super').disabled = true; }));
-
+// Alap UI frissítés (Lőszer, HP sáv a játékban)
 window.updateUI = function() {
-    if(healthFill) healthFill.style.width = Math.max(0, playerHealth) + '%';
-    if(healthFill) healthFill.style.backgroundColor = playerHealth > 60 ? '#00ff00' : playerHealth > 30 ? '#ffaa00' : '#ff0000';
+    let maxHP = 100 + (skills.maxHealth.level * 20);
+    if(healthFill) healthFill.style.width = Math.max(0, (playerHealth / maxHP) * 100) + '%';
+    if(healthFill) healthFill.style.backgroundColor = (playerHealth / maxHP) > 0.6 ? '#00ff00' : (playerHealth / maxHP) > 0.3 ? '#ffaa00' : '#ff0000';
     if(armorFill) armorFill.style.width = Math.max(0, playerArmor) + '%';
     if(scoreDisplay) scoreDisplay.innerText = `PÉNZ: ${score}`;
     
@@ -61,6 +172,7 @@ window.updateUI = function() {
     if(ammoDisplay) ammoDisplay.innerText = `[ ${w.ammo} / ${w.reserve} ]`;
     if(weaponInfoDisplay) weaponInfoDisplay.innerText = w.name;
 }
+
 
 window.showHitmarker = function(isHeadshot) {
     hitmarker.classList.remove('hidden');
