@@ -24,38 +24,64 @@
         <button id="start-game-btn">JÁTÉK INDÍTÁSA</button>
     </div>
 
+<!-- ÚJ: SCI-FI TERMINÁL KINÉZET -->
     <div id="shop-menu" class="hidden">
-        <h2>BOLT (Két hullám között)</h2>
-        <p>Pontjaid (Pénz): <span id="shop-points">0</span></p>
-        <div class="shop-grid">
-            <button id="buy-health" class="shop-btn">Élet Maxolása<br>(100 P)</button>
-            <button id="buy-armor" class="shop-btn">Páncél +50<br>(200 P)</button>
-            <button id="buy-ammo" class="shop-btn">Lőszer (Aktuális fegyverbe)<br>(50 P)</button>
-            <button id="buy-shotgun" class="shop-btn">Sörétes Puska<br>(500 P)</button>
-            <button id="buy-rifle" class="shop-btn">Gépkarabély<br>(1000 P)</button>
-            <button id="buy-super" class="shop-btn">Szuper fegyver<br>(5000 P)</button>
+        <div id="terminal-screen">
+            <div class="terminal-header">TERMINÁL [AKTÍV]</div>
+            <div class="terminal-sub">EGYENLEG: <span id="shop-points">0</span> CR</div>
+            
+            <div class="shop-tabs">
+                <button id="tab-weapons" class="tab-btn active">FEGYVEREK</button>
+                <button id="tab-skills" class="tab-btn">FEJLESZTÉSEK</button>
+            </div>
+
+            <div id="shop-weapons" class="shop-tab-content">
+                <div class="shop-grid">
+                    <button id="buy-pistol" class="shop-btn"></button>
+                    <button id="buy-shotgun" class="shop-btn"></button>
+                    <button id="buy-rifle" class="shop-btn"></button>
+                    <button id="buy-super" class="shop-btn"></button>
+                    <button id="buy-ammo" class="shop-btn" style="grid-column: span 2;"></button>
+                </div>
+            </div>
+
+            <div id="shop-skills" class="shop-tab-content hidden">
+                <div class="shop-grid">
+                    <button id="skill-revive" class="shop-btn"></button>
+                    <button id="skill-health" class="shop-btn"></button>
+                    <button id="skill-speed" class="shop-btn"></button>
+                    <button id="skill-ammoLoot" class="shop-btn"></button>
+                    <button id="skill-healthLoot" class="shop-btn"></button>
+                    <button id="skill-freeze" class="shop-btn"></button>
+                </div>
+            </div>
+
+            <button id="close-shop-btn">KAPCSOLAT BONTÁSA</button>
         </div>
-        <button id="close-shop-btn">VISSZA A HARCBA</button>
     </div>
 
+    <!-- JÁTÉK UI -->
     <div id="game-ui-wrapper" class="hidden">
         <div id="damage-flash"></div>
         <div id="heal-flash"></div>
-<div id="ammo-flash"></div> 
+        <div id="ammo-flash"></div>
+        <div id="screen-blood" style="opacity: 0;"></div>
+        <div id="ice-overlay" style="opacity: 0;"></div> <!-- ÚJ JÉG EFFEKT -->
 
         <div id="ui-layer">
-           <div id="radar"><div class="radar-center"></div><div class="radar-scanner"></div></div>
+            <div id="radar"><div class="radar-center"></div><div class="radar-scanner"></div></div>
             
             <div id="health-bar-container">
                 <div id="health-fill"></div>
-                <div id="armor-fill" style="width: 0%;"></div> </div>
+                <div id="armor-fill" style="width: 0%;"></div> 
+            </div>
             <div id="score-display">PÉNZ: 0</div>
             <div id="crosshair"><div class="crosshair-center"></div></div>
             
             <div id="hitmarker" class="hidden"></div>
             <div id="headshot-msg" class="hidden">FEJLÖVÉS! 💀</div>
-            <div id="screen-blood" style="opacity: 0;"></div>
             
+            <button id="freeze-btn" class="hidden">❄️ FAGYASZTÁS</button> <!-- ÚJ GOMB -->
             <button id="switch-weapon-btn">🔄 VÁLTÁS</button>
             <div id="weapon-info-display">Pisztoly</div>
             <div id="ammo-display">[ 10 / 30 ]</div>
