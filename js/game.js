@@ -6,6 +6,7 @@ scene.background = new THREE.Color(0x051a05); // Radioaktív zöldes fekete
 scene.fog = new THREE.FogExp2(0x051a05, 0.035);
 
 camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.01, 1000);
+camera.position.set(0, 1.6, 0); // <-- JAVÍTÁS: Már a menüben is szemmagasságban lesz!
 clock = new THREE.Clock();
 
 renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -86,6 +87,7 @@ function loadSound(name, url, volume = 1.0, isLoop = false) {
 }
 
 loadSound('music', 'https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/f162302b83992b9adfe75b1c3ade387a25e2478d/music.mp3', 0.3, true); 
+loadSound('menuMusic', 'https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/212958c21ddceb0db80820c1d91b06b7d9a5a950/main.m4a', 0.5, true); 
 loadSound('ammo', 'https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/7bc7874a7ddc6802b16f0d3eafb82b2b4860e125/ammo%20box.mp3', 1.0);
 loadSound('shoot', 'https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/7bc7874a7ddc6802b16f0d3eafb82b2b4860e125/gun%20shoot.mp3', 0.7);
 loadSound('heal', 'https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/7bc7874a7ddc6802b16f0d3eafb82b2b4860e125/heal.mp3', 1.0);
@@ -394,7 +396,7 @@ zoneRight.addEventListener('touchmove', (e) => {
 zoneRight.addEventListener('touchend', (e) => { if (e.changedTouches[0].identifier === rightTouchId) rightTouchId = null; });
 
 // ==========================================
-// ÚJ, IGAZI PC-S FPS IRÁNYÍTÁS (Egér rögzítése, WASD)
+// ÚJ, IGAZI PC-S FPS IRÁNYÍTÁS ÉS BIZTONSÁG
 // ==========================================
 const keys = { w: false, a: false, s: false, d: false };
 
@@ -404,21 +406,18 @@ window.addEventListener('keyup', (e) => { let key = e.key.toLowerCase(); if (key
 setInterval(() => {
     if (gameState === 'PLAYING') {
         let kmX = 0, kmZ = 0;
-        
-        // IRÁNYOK JAVÍTVA:
-        // A joystick matematikája alapján: -1 Z az előre, +1 Z a hátra.
-        if (keys.w) kmZ = -1; // W = Előre
-        if (keys.s) kmZ = 1;  // S = Hátra
-        if (keys.a) kmX = -1; // A = Balra
-        if (keys.d) kmX = 1;  // D = Jobbra
+        if (keys.w) kmZ = -1; 
+        if (keys.s) kmZ = 1;  
+        if (keys.a) kmX = -1; 
+        if (keys.d) kmX = 1;  
         
         if (kmX !== 0 || kmZ !== 0) { moveX = kmX; moveZ = kmZ; } 
         else if (leftTouchId === null) { moveX = 0; moveZ = 0; }
     }
 }, 16);
 
+// EGÉR RÖGZÍTÉSE
 document.body.addEventListener('click', (e) => {
-    // Csak a játéktéren kattintva rögzítse az egeret, menüben/bolton NE!
     if (gameState === 'PLAYING' && document.pointerLockElement !== document.body) {
         if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SELECT') {
             document.body.requestPointerLock();
@@ -426,29 +425,63 @@ document.body.addEventListener('click', (e) => {
     }
 });
 
-// NÉZELŐDÉS EGÉRREL (Csak akkor, ha az egér el van rejtve)
+// NÉZELŐDÉS
 window.addEventListener('mousemove', (e) => {
     if (document.pointerLockElement === document.body && gameState === 'PLAYING') {
-        // Kicsit finomabb érzékenység (0.003), mert az egeret gyorsabb húzni, mint a képernyőt
         yaw -= (e.movementX || 0) * 0.003;
         pitch -= (e.movementY || 0) * 0.003;
         pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
     }
 });
 
-// GOMBOK: LÖVÉS (Bal) ÉS FEGYVER VÁLTÁS (Jobb)
+// GOMBOK: LÖVÉS ÉS VÁLTÁS
 window.addEventListener('mousedown', (e) => {
-    // Csak akkor lőjön PC-n, ha a játék megy ÉS a kurzor el van rejtve (játék módban vagyunk)
     if (gameState !== 'PLAYING' || document.pointerLockElement !== document.body) return;
-
     if (e.button === 0) {
-        // BAL KLIKK: Lövés
         isShootingBtnPressed = true; 
         if(weapons[currentWeaponId].auto) autoShootTimer = weapons[currentWeaponId].fireRate;
         handleShoot(); 
     } else if (e.button === 2) {
-        // JOBB KLIKK: Fegyver váltás
         if (typeof handleWeaponSwitch === 'function') handleWeaponSwitch(e);
+    }
+});
+
+window.addEventListener('mouseup', (e) => {
+    if (e.button === 0) isShootingBtnPressed = false;
+});
+window.addEventListener('contextmenu', (e) => e.preventDefault());
+
+// --- ÚJ BIZTONSÁGI VÉDELEM AZ AUTOMATA LÖVÉS BUG ELLEN ---
+document.addEventListener('pointerlockchange', () => {
+    // Ha az egér szabaddá válik (pl. ESC megnyomása, vagy menü kinyílása), azonnal álljon le a lövés!
+    if (document.pointerLockElement !== document.body) {
+        isShootingBtnPressed = false;
+    }
+});
+window.addEventListener('blur', () => { isShootingBtnPressed = false; }); // Ha ablakot vált a játékos
+
+const shootBtn = document.getElementById('shoot-btn');
+if(shootBtn) {
+    shootBtn.addEventListener('touchstart', (e) => { 
+        e.preventDefault(); isShootingBtnPressed = true; 
+        if(weapons[currentWeaponId].auto) autoShootTimer = weapons[currentWeaponId].fireRate;
+        handleShoot(e); 
+    });
+    shootBtn.addEventListener('touchend', (e) => { e.preventDefault(); isShootingBtnPressed = false; });
+    shootBtn.addEventListener('mousedown', () => { 
+        isShootingBtnPressed = true; 
+        if(weapons[currentWeaponId].auto) autoShootTimer = weapons[currentWeaponId].fireRate;
+        handleShoot(); 
+    });
+    shootBtn.addEventListener('mouseup', () => { isShootingBtnPressed = false; });
+    shootBtn.addEventListener('mouseleave', () => { isShootingBtnPressed = false; }); // JAVÍTÁS: Ha lehúzod róla az egeret, leáll
+}
+
+window.addEventListener('resize', () => {
+    if (camera && renderer) {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
     }
 });
 
@@ -515,6 +548,16 @@ window.startGame = function() {
         setTimeout(window.startGame, 500); return; 
     }
     
+    // --- ÚJ: ZENE VÁLTÁS ---
+    // Menü zene leállítása
+    if (sounds['menuMusic'] && sounds['menuMusic'].isPlaying) {
+        sounds['menuMusic'].stop();
+    }
+    // Harci zene elindítása
+    if (sounds['music'] && sounds['music'].buffer && !sounds['music'].isPlaying) {
+        sounds['music'].play();
+    }
+    
     gameState = 'PLAYING'; 
     playerHealth = 100; playerArmor = 0; score = 0; currentWave = 1; enemiesToSpawn = 5; currentWeaponId = 'pistol';
     weapons.pistol.ammo = weapons.pistol.maxAmmo; weapons.pistol.reserve = weapons.pistol.maxReserve;
@@ -548,6 +591,19 @@ function animate() {
     requestAnimationFrame(animate); 
     const delta = clock.getDelta();
     
+// Ha menüben vagyunk, a kamera lassan körbeforog a pályán
+    if (gameState === 'MENU') {
+        yaw -= delta * 0.15; // Lassú, balra tartó forgás
+        
+        // ÚJ: Finom filmes lebegés és enyhe lefelé nézés
+        camera.position.y = 1.6 + Math.sin(clock.getElapsedTime() * 0.8) * 0.15; 
+        camera.quaternion.setFromEuler(new THREE.Euler(-0.05, yaw, 0, 'YXZ')); 
+        
+        radSystem.rotation.y += delta * 0.05; // A por is lassan örvénylik
+        renderer.render(scene, camera);
+        return;
+    }
+
     if (gameState !== 'PLAYING') { 
         renderer.render(scene, camera); return; 
     }
@@ -787,27 +843,60 @@ if (Math.hypot(savedCamX - mk.mesh.position.x, camera.position.z - mk.mesh.posit
     camera.position.x = savedCamX;
 }
 
-const shootBtn = document.getElementById('shoot-btn');
-if(shootBtn) {
-    shootBtn.addEventListener('touchstart', (e) => { 
-        e.preventDefault(); isShootingBtnPressed = true; 
-        if(weapons[currentWeaponId].auto) autoShootTimer = weapons[currentWeaponId].fireRate;
-        handleShoot(e); 
-    });
-    shootBtn.addEventListener('touchend', (e) => { e.preventDefault(); isShootingBtnPressed = false; });
-    shootBtn.addEventListener('mousedown', () => { 
-        isShootingBtnPressed = true; 
-        if(weapons[currentWeaponId].auto) autoShootTimer = weapons[currentWeaponId].fireRate;
-        handleShoot(); 
-    });
-    shootBtn.addEventListener('mouseup', () => { isShootingBtnPressed = false; });
-}
 
-window.addEventListener('resize', () => {
-    if (camera && renderer) {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
+
+// ==========================================
+// TÖLTŐKÉPERNYŐ ÉS MENÜ LOGIKA
+// ==========================================
+let minLoadingTimePassed = false;
+let loadingTimer = 0;
+
+const loadInterval = setInterval(() => {
+    loadingTimer += 100; // 100ms-enként frissül
+    
+    const liquid = document.getElementById('radioactive-liquid');
+    const statusText = document.getElementById('loading-status');
+    const continueBtn = document.getElementById('loading-continue-btn'); // Gomb lekérése
+    
+    // Folyadék animálása 0-tól 90%-ig a fix idő alatt
+    let progress = Math.min((loadingTimer / 5000) * 90, 90);
+    if(liquid) liquid.style.width = progress + '%';
+    if(statusText) statusText.innerText = "Modellek dekódolása... " + Math.floor(progress) + "%";
+
+    if (loadingTimer >= 5000) minLoadingTimePassed = true;
+
+    // Ha az idő lejárt ÉS a modellek betöltöttek
+    if (minLoadingTimePassed && zombieModel && fastZombieModel && hiderZombieModel && ammoModel && healthModel) {
+        clearInterval(loadInterval);
+        
+        // Csík 100%-ra ugrik
+        if(liquid) liquid.style.width = '100%';
+        if(statusText) statusText.innerText = "RENDSZER ONLINE. KÉSZENLÉT.";
+
+        // ÚJ: Automatikus továbbugrás helyett megjelenítjük a gombot
+        if(continueBtn) continueBtn.classList.remove('hidden');
     }
+}, 100);
+
+// ÚJ: Kattintás a "Belépés a rendszerbe" gombra
+document.getElementById('loading-continue-btn').addEventListener('click', () => {
+    // Böngésző hangfeloldása (User Interaction megvolt)
+    if (listener.context.state === 'suspended') listener.context.resume();
+    
+    // Főmenü zene elindítása
+    if (sounds['menuMusic'] && sounds['menuMusic'].buffer && !sounds['menuMusic'].isPlaying) {
+        sounds['menuMusic'].play();
+    }
+
+    // Töltőképernyő eltüntetése CSS áttűnéssel
+    const ls = document.getElementById('loading-screen');
+    if(ls) ls.style.opacity = '0'; 
+    
+    setTimeout(() => {
+        if(ls) ls.style.display = 'none';
+        document.getElementById('main-menu').classList.remove('hidden');
+        gameState = 'MENU'; // Elindul a kamera forgás
+    }, 1500);
 });
+
 animate();
