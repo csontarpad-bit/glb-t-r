@@ -201,20 +201,39 @@ function handleWeaponSwitch(e) {
 document.getElementById('start-game-btn').addEventListener('click', (e) => {
     e.preventDefault();
     
-    // --- ÚJ: Teljes képernyő (Fullscreen) kérése ---
+    // Teljes képernyő kérése
     let elem = document.documentElement;
-    if (elem.requestFullscreen) {
-        elem.requestFullscreen().catch(err => console.log("Fullscreen hiba:", err));
-    } else if (elem.webkitRequestFullscreen) { /* Safari / iOS mobilos támogatás */
-        elem.webkitRequestFullscreen();
-    }
-    // ------------------------------------------------
+    if (elem.requestFullscreen) elem.requestFullscreen().catch(e=>{});
+    else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
     
-    currentDifficulty = document.getElementById('difficulty-select').value;
-    document.getElementById('main-menu').classList.add('hidden');
-    document.getElementById('game-ui-wrapper').classList.remove('hidden');
-    if(typeof unlockAudio === 'function') unlockAudio();
-    if(typeof startGame === 'function') startGame();
+    // --- ÚJ: FADE ÁTMENET ÉS ELALVÁS ---
+    const fadeOverlay = document.getElementById('fade-overlay');
+    if (fadeOverlay) fadeOverlay.style.opacity = '1';
+
+    // Menü zene leállítása, hogy a sötétségben csend legyen
+    if (typeof sounds !== 'undefined' && sounds['menuMusic'] && sounds['menuMusic'].isPlaying) {
+        sounds['menuMusic'].stop();
+    }
+    
+    // Várunk 1.5 másodpercet amíg a képernyő teljesen fekete lesz
+    setTimeout(() => {
+        // UI és Állapot Frissítés (Már a sötétség alatt történik)
+        currentDifficulty = document.getElementById('difficulty-select').value;
+        document.getElementById('main-menu').classList.add('hidden');
+        document.getElementById('game-ui-wrapper').classList.remove('hidden');
+        
+        yaw = 0; pitch = 0; moveX = 0; moveZ = 0;
+        if (camera) camera.position.set(0, 1.6, 0);
+
+        if(typeof unlockAudio === 'function') unlockAudio();
+        if(typeof startGame === 'function') startGame();
+
+        // Kivilágosodás ("Ébredés")
+        setTimeout(() => {
+            if (fadeOverlay) fadeOverlay.style.opacity = '0';
+        }, 500); // Fél másodpercet töltünk a teljes sötétben, mielőtt kinyitnánk a szemünk
+        
+    }, 1500);
 });
 
 document.getElementById('restart-btn').addEventListener('click', (e) => {
