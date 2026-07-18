@@ -1,4 +1,4 @@
-var gameState = 'MENU';
+var gameState = 'LOADING'; 
 var highScore = 0;
 
 var playerHealth = 100;
