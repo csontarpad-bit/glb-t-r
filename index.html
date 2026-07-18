@@ -10,18 +10,41 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
 </head>
 <body>
-    <div id="main-menu">
-        <h1>QUARANTINE CITY</h1>
-        <p id="high-score-display">LEGJOBB PONT: 0</p>
-        <div class="menu-options">
-            <label>Nehézség:</label>
-            <select id="difficulty-select">
-                <option value="easy">Könnyű</option>
-                <option value="medium" selected>Normál</option>
-                <option value="hard">Nehéz</option>
-            </select>
+    
+<div id="fade-overlay" style="position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: black; z-index: 10000; opacity: 0; pointer-events: none; transition: opacity 1.5s ease-in-out;"></div>
+
+<!-- ÚJ: TÖLTŐKÉPERNYŐ -->
+    <div id="loading-screen">
+        <div class="loading-content">
+            <h2 class="loading-text">RENDSZER INICIALIZÁLÁSA...</h2>
+            <!-- Radioaktív kémcső (Töltőcsík) -->
+            <div class="radioactive-tube">
+                <div id="radioactive-liquid"></div>
+            </div>
+            <p id="loading-status">Kapcsolat felépítése...</p>
+            
+            <!-- ÚJ: Belépés Gomb (Kezdetben rejtve van) -->
+            <button id="loading-continue-btn" class="cyber-btn hidden" style="margin-top: 25px; font-size: 20px; padding: 10px 25px;">BELÉPÉS A RENDSZERBE</button>
         </div>
-        <button id="start-game-btn">JÁTÉK INDÍTÁSA</button>
+    </div>
+
+    <!-- ÚJ: ÉLŐ 3D FŐMENÜ -->
+    <div id="main-menu" class="hidden">
+        <div class="menu-box">
+            <h1>QUARANTINE<br><span class="highlight">CITY</span></h1>
+            <p id="high-score-display">KORÁBBI EGYENLEG: 0 CR</p>
+            
+            <div class="menu-options">
+                <label>FENYEGETÉSI SZINT:</label>
+                <select id="difficulty-select" class="cyber-select">
+                    <option value="easy">1. FOKOZAT (Könnyű)</option>
+                    <option value="medium" selected>2. FOKOZAT (Normál)</option>
+                    <option value="hard">3. FOKOZAT (Nehéz)</option>
+                </select>
+            </div>
+            
+            <button id="start-game-btn" class="cyber-btn">BEVETÉS INDÍTÁSA</button>
+        </div>
     </div>
 
 <!-- ÚJ: SCI-FI TERMINÁL KINÉZET -->
