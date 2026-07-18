@@ -6,20 +6,17 @@ scene.background = new THREE.Color(0x051a05); // Radioaktív zöldes fekete
 scene.fog = new THREE.FogExp2(0x051a05, 0.035);
 
 camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.01, 1000);
-// ÚJ SOR: Azonnal felemeljük a kamerát szemmagasságba, így látod a pályát amíg töltenek a zombik!
-camera.position.set(0, 1.6, 0); 
-
 clock = new THREE.Clock();
 
 renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.physicallyCorrectLights = false; // KIKAPCSOLVA: Így már nem lesz koromsötét!
+renderer.physicallyCorrectLights = true; // VISSZAÁLLÍTVA a régi, működő verzióra
 document.body.appendChild(renderer.domElement);
 
-// Fények (Megnövelt alap fényerővel)
-scene.add(new THREE.AmbientLight(0x55ff55, 0.8)); // Erősebb zöldes alapfény
-playerLight = new THREE.PointLight(0xaaffaa, 1.5, 30); // Erősebb fáklya
+// Fények
+scene.add(new THREE.AmbientLight(0x55ff55, 0.3)); 
+playerLight = new THREE.PointLight(0xaaffaa, 0.8, 20);
 scene.add(playerLight);
 
 const flashlight = new THREE.SpotLight(0xaaffaa, 20, 50, Math.PI / 6, 0.5);
@@ -33,14 +30,38 @@ muzzleFlash.position.set(0.8, -0.6, -3.0);
 camera.add(muzzleFlash);
 scene.add(camera);
 
-// Radioaktív por (részecskék a levegőben)
+// ==========================================
+// Radioaktív por (Részecskék) - FELÚJÍTVA!
+// ==========================================
+// 1. Létrehozunk egy ragyogó, kerek textúrát (külső kép nélkül, memóriában)
+const particleCanvas = document.createElement('canvas');
+particleCanvas.width = 32; particleCanvas.height = 32;
+const pContext = particleCanvas.getContext('2d');
+const gradient = pContext.createRadialGradient(16, 16, 0, 16, 16, 16);
+gradient.addColorStop(0, 'rgba(200, 255, 200, 1)'); // Fehéres-zöld mag
+gradient.addColorStop(0.4, 'rgba(0, 255, 0, 0.6)'); // Élénkzöld perem
+gradient.addColorStop(1, 'rgba(0, 50, 0, 0)');      // Átlátszó szél
+pContext.fillStyle = gradient;
+pContext.fillRect(0, 0, 32, 32);
+const particleTexture = new THREE.CanvasTexture(particleCanvas);
+
+// 2. Részecskék legenerálása
 const radGeo = new THREE.BufferGeometry();
 const radVerts = [];
-for (let i = 0; i < 300; i++) {
+for (let i = 0; i < 400; i++) { // Kicsit több részecske
     radVerts.push((Math.random() - 0.5) * 50, Math.random() * 10, (Math.random() - 0.5) * 50);
 }
 radGeo.setAttribute('position', new THREE.Float32BufferAttribute(radVerts, 3));
-const radMat = new THREE.PointsMaterial({ color: 0x00ff00, size: 0.1, transparent: true, opacity: 0.5 });
+
+// 3. Izzó, textúrázott anyag
+const radMat = new THREE.PointsMaterial({ 
+    color: 0x55ff55, 
+    size: 0.6, // Nagyobb részecskék
+    map: particleTexture, 
+    transparent: true, 
+    blending: THREE.AdditiveBlending, // Gyönyörűen világítanak, ha fedik egymást
+    depthWrite: false // Ne takarják ki a mögöttük lévő dolgokat hibásan
+});
 const radSystem = new THREE.Points(radGeo, radMat);
 scene.add(radSystem);
 
@@ -75,10 +96,7 @@ loadSound('zombieDie', 'https://raw.githubusercontent.com/csontarpad-bit/glb-t-r
 
 window.unlockAudio = function() {
     if (listener.context.state === 'suspended') listener.context.resume();
-    // Biztonságosabb ellenőrzés a betöltés elcsúszása ellen
-    if (sounds['music'] && sounds['music'].buffer && !sounds['music'].isPlaying) {
-        sounds['music'].play();
-    }
+    if (sounds['music'] && sounds['music'].buffer && !sounds['music'].isPlaying) sounds['music'].play();
 }
 
 window.playSound = function(name, offset = 0) {
@@ -107,17 +125,10 @@ window.playHitmarkerSound = function() {
 // 3. PÁLYA ÉS MODELLEK BETÖLTÉSE
 // ==========================================
 const textureLoader = new THREE.TextureLoader(); 
-const floorTex = textureLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/6ff430b224fb8cd358b83fade1e06710d708d094/1783431196560.png',
-    undefined, 
-    undefined, 
-    (err) => console.error('Hiba a padló textúra betöltése közben:', err)
-); 
+// VISSZAÁLLÍTVA A RÉGI MŰKÖDŐ BETÖLTÉSRE
+const floorTex = textureLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/6ff430b224fb8cd358b83fade1e06710d708d094/1783431196560.png'); 
 floorTex.wrapS = THREE.RepeatWrapping; floorTex.wrapT = THREE.RepeatWrapping; floorTex.repeat.set(10, 10); 
-const wallTex = textureLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/6ff430b224fb8cd358b83fade1e06710d708d094/1783431502863.png',
-    undefined,
-    undefined,
-    (err) => console.error('Hiba a fal textúra betöltése közben:', err)
-); 
+const wallTex = textureLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/6ff430b224fb8cd358b83fade1e06710d708d094/1783431502863.png'); 
 wallTex.wrapS = THREE.RepeatWrapping; wallTex.wrapT = THREE.RepeatWrapping; wallTex.repeat.set(4, 1); 
 
 const floorMat = new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.9, metalness: 0.1 }); 
@@ -135,13 +146,11 @@ function createWall(w, h, d, x, z) {
     wallHitboxes.push(new THREE.Box3().setFromObject(mesh)); 
 }
 
-// Külső falak
 createWall(arenaSize + 4, wallHeight, 2, 0, -26); 
 createWall(arenaSize + 4, wallHeight, 2, 0, 26); 
 createWall(2, wallHeight, arenaSize, -26, 0); 
 createWall(2, wallHeight, arenaSize, 26, 0);  
 
-// Belső oszlopok
 const pillars = [{x:-10,z:-10}, {x:10,z:-10}, {x:-10,z:10}, {x:10,z:10}];
 pillars.forEach(p => createWall(4, wallHeight, 4, p.x, p.z));
 
@@ -155,7 +164,7 @@ window.checkWallCollision = function(x, z, r) {
 
 const gltfLoader = new THREE.GLTFLoader();
 
-// Fegyver modell
+// VISSZAÁLLÍTVA A RÉGI MŰKÖDŐ BETÖLTÉSRE (nincs undefined paraméter)
 gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/8c7271b0135d22428617169177fe45e31e6aecf7/ultrakill_alternate_revolver.glb', (gltf) => { 
     const gunMesh = gltf.scene; 
     gunMesh.scale.set(3, 3, 3); 
@@ -168,31 +177,29 @@ gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/8c7271
         gunShootAction.setLoop(THREE.LoopOnce); 
         gunShootAction.clampWhenFinished = true; 
     } 
-}, undefined, (error) => console.error('Hiba a fegyver modell betöltése közben:', error));
+});
 
-// Zombi, Ammo, Health modellek
 gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/main/zombie.glb', (gltf) => { 
     zombieModel = gltf.scene; 
     zombieAnimations = gltf.animations; 
     zombieModel.traverse((c) => { if(c.isMesh) c.frustumCulled = false; }); 
-}, undefined, (error) => console.error('Hiba a zombi modell betöltése közben:', error));
+});
 
 gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/6aa130a4c148ae5e16855905c4a15b9978e974ee/Fast%20zombie.glb', (gltf) => { 
     fastZombieModel = gltf.scene; 
     fastZombieAnimations = gltf.animations; 
     fastZombieModel.traverse((c) => { if(c.isMesh) c.frustumCulled = false; }); 
-}, undefined, (error) => console.error('Hiba a gyors zombi modell betöltése közben:', error));
-// Hider Zombi
+});
+
 gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/6aa130a4c148ae5e16855905c4a15b9978e974ee/hider%20zombie.glb', (gltf) => { 
     hiderZombieModel = gltf.scene; 
     hiderZombieAnimations = gltf.animations; 
     hiderZombieModel.traverse((c) => { if(c.isMesh) c.frustumCulled = false; }); 
-}, undefined, (error) => console.error('Hiba a hider zombi modell betöltése közben:', error));
+});
 
-gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/db069dbbe97f2d9cd71985c37eb64dad31848434/ammo.glb', (gltf) => { ammoModel = gltf.scene; }, undefined, (error) => console.error('Hiba az ammo modell betöltése közben:', error));
-gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/db069dbbe97f2d9cd71985c37eb64dad31848434/health.glb', (gltf) => { healthModel = gltf.scene; }, undefined, (error) => console.error('Hiba a health modell betöltése közben:', error));
+gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/db069dbbe97f2d9cd71985c37eb64dad31848434/ammo.glb', (gltf) => { ammoModel = gltf.scene; });
+gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/db069dbbe97f2d9cd71985c37eb64dad31848434/health.glb', (gltf) => { healthModel = gltf.scene; });
 
-// Vérfolt generátor
 function createBloodStain(x, z) {
     const geo = new THREE.CircleGeometry(1.2 + Math.random() * 0.8, 32);
     const mat = new THREE.MeshBasicMaterial({ color: 0x440000, transparent: true, opacity: 0.7, depthWrite: false });
@@ -206,25 +213,20 @@ function createBloodStain(x, z) {
 
 
 // ==========================================
-// 4. LÖVÉS, IRÁNYÍTÁS ÉS FEGYVER LOGIKA
+// 4. LÖVÉS ÉS IRÁNYÍTÁS LOGIKA
 // ==========================================
 
-
 window.handleShoot = function(e) {
-    // Biztonságos eseménykezelés
     if (e) { e.preventDefault(); e.stopPropagation(); }
-    
     if (gameState !== 'PLAYING' || isReloading) return;
     
     let wpn = weapons[currentWeaponId];
 
-    // 1. Újratöltés logika
     if (wpn.ammo <= 0) { 
         if (wpn.reserve > 0) { 
             isReloading = true; 
             playSound('reload'); 
             document.getElementById('reload-text').classList.remove('hidden'); 
-            
             setTimeout(() => { 
                 const load = Math.min(wpn.maxAmmo - wpn.ammo, wpn.reserve); 
                 wpn.ammo += load; 
@@ -237,86 +239,99 @@ window.handleShoot = function(e) {
         return; 
     }
     
-    // 2. Lövés logika
     wpn.ammo--; 
     if (typeof updateUI === 'function') updateUI(); 
     playSound('shoot', 0.4);
     
-    // Vizualitás és visszarúgás
     muzzleFlash.intensity = 8.0; 
     recoilPitch += 0.08 + (wpn.spread * 0.5); 
     if (gunShootAction) { gunShootAction.stop(); gunShootAction.play(); }
 
     const raycaster = new THREE.Raycaster(); 
     
-    // Sörétes puska (Shotgun) spread logika - Több lövedék
+    const isSuper = currentWeaponId === 'super';
+    
     for (let p = 0; p < wpn.pellets; p++) {
         const spreadX = (Math.random() - 0.5) * wpn.spread;
         const spreadY = (Math.random() - 0.5) * wpn.spread;
         raycaster.setFromCamera(new THREE.Vector2(spreadX, spreadY), camera);
         
         const intersects = raycaster.intersectObjects(enemyHitboxes, false);
-        const endPoint = intersects.length > 0 ? intersects[0].point : raycaster.ray.at(50, new THREE.Vector3());
-        
-        // Szuper fegyver = Kék lézer, többi = Sárga
-        const laserColor = currentWeaponId === 'super' ? 0x00ffff : 0xffff00;
-        const laserMat = new THREE.LineBasicMaterial({ color: laserColor, linewidth: 3 });
         const startPoint = new THREE.Vector3(0.5, -0.5, -1).applyMatrix4(camera.matrixWorld);
-        const laser = new THREE.Line(new THREE.BufferGeometry().setFromPoints([startPoint, endPoint]), laserMat);
-        scene.add(laser); 
-        setTimeout(() => scene.remove(laser), 100);
         
-        // Találat ellenőrzése
+        // A szuper fegyver lézere átmegy mindenen (max távig), a sima megáll az első találatnál
+        const endPoint = (isSuper || intersects.length === 0) ? raycaster.ray.at(50, new THREE.Vector3()) : intersects[0].point;
+        
+        // --- LÁTVÁNY ---
+        if (isSuper) {
+            // Vastag 3D lézerhenger a szuper fegyverhez
+            const distance = startPoint.distanceTo(endPoint);
+            const cylinderGeo = new THREE.CylinderGeometry(0.2, 0.2, distance, 8);
+            const cylinderMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.8 });
+            const cylinder = new THREE.Mesh(cylinderGeo, cylinderMat);
+            cylinder.position.copy(startPoint).lerp(endPoint, 0.5);
+            cylinder.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3().subVectors(endPoint, startPoint).normalize());
+            scene.add(cylinder);
+            setTimeout(() => scene.remove(cylinder), 150);
+        } else {
+            // Sima sárga lézer a többihez
+            const laserMat = new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 3 });
+            const laser = new THREE.Line(new THREE.BufferGeometry().setFromPoints([startPoint, endPoint]), laserMat);
+            scene.add(laser); 
+            setTimeout(() => scene.remove(laser), 100);
+        }
+        
+        // --- SEBZÉS ---
         if (intersects.length > 0) { 
-            const hitObj = intersects[0].object;
-            const index = enemies.findIndex(e => e.bodyHitbox === hitObj || e.headHitbox === hitObj); 
+            // Ha szuper fegyver, akkor az összes eltalált zombin végigmegyünk, különben csak az elsőn
+            let hitTargets = isSuper ? intersects : [intersects[0]];
+            let damagedEnemies = new Set(); // Ne sebezzük ugyanazt a zombit kétszer (test + fej)
             
-            if (index > -1) { 
-                const en = enemies[index];
-                const isHeadshot = hitObj.userData.type === 'head';
+            for (let hit of hitTargets) {
+                const hitObj = hit.object;
+                const index = enemies.findIndex(e => e.bodyHitbox === hitObj || e.headHitbox === hitObj); 
                 
-                if (typeof showHitmarker === 'function') showHitmarker(isHeadshot); 
-                
-                // MÓDOSÍTVA: Pittyegés helyett zombi sérülés hangja
-                playSound('zombieHit');
-
-                let dmg = isHeadshot ? wpn.damage * 3 : wpn.damage;
-                en.health -= dmg; 
-                score += isHeadshot ? 50 : 10; // PÉNZ ADÁSA
-                if (typeof updateUI === 'function') updateUI();
-
-                // Zombi halála
-                if (en.health <= 0) {
-                    // MÓDOSÍTVA: Zombi halál hangja
-                    playSound('zombieDie');
-                    createBloodStain(en.mesh.position.x, en.mesh.position.z);
+                if (index > -1 && !damagedEnemies.has(index)) { 
+                    damagedEnemies.add(index);
+                    const en = enemies[index];
+                    const isHeadshot = hitObj.userData.type === 'head';
                     
-                    // Robbanás részecskék
-                    const particleMat = new THREE.MeshBasicMaterial({ color: 0xaa0000 });
-                    for (let i = 0; i < 15; i++) {
-                        const m = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), particleMat);
-                        m.position.copy(intersects[0].point);
-                        scene.add(m);
-                        particles.push({ mesh: m, vx: (Math.random()-0.5)*0.3, vy: Math.random()*0.3, vz: (Math.random()-0.5)*0.3, life: 1.0 });
-                    }
-                    
-                    const radarContainer = document.getElementById('radar');
-                    if (radarContainer && en.blip && en.blip.parentNode === radarContainer) {
-                        radarContainer.removeChild(en.blip);
-                    }
-                    scene.remove(en.mesh); 
-                    enemyHitboxes.splice(enemyHitboxes.indexOf(en.bodyHitbox), 1); 
-                    enemyHitboxes.splice(enemyHitboxes.indexOf(en.headHitbox), 1);
-                    enemies.splice(index, 1); 
-                } 
+                    if (typeof showHitmarker === 'function') showHitmarker(isHeadshot); 
+                    playSound('zombieHit');
+
+                    let dmg = isHeadshot ? wpn.damage * 3 : wpn.damage;
+                    en.health -= dmg; 
+                    score += isHeadshot ? 50 : 10;
+                    if (typeof updateUI === 'function') updateUI();
+
+                    if (en.health <= 0) {
+                        playSound('zombieDie');
+                        createBloodStain(en.mesh.position.x, en.mesh.position.z);
+                        
+                        const particleMat = new THREE.MeshBasicMaterial({ color: 0xaa0000 });
+                        for (let i = 0; i < 15; i++) {
+                            const m = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), particleMat);
+                            m.position.copy(hit.point);
+                            scene.add(m);
+                            particles.push({ mesh: m, vx: (Math.random()-0.5)*0.3, vy: Math.random()*0.3, vz: (Math.random()-0.5)*0.3, life: 1.0 });
+                        }
+                        
+                        const radarContainer = document.getElementById('radar');
+                        if (radarContainer && en.blip && en.blip.parentNode === radarContainer) {
+                            radarContainer.removeChild(en.blip);
+                        }
+                        scene.remove(en.mesh); 
+                        enemyHitboxes.splice(enemyHitboxes.indexOf(en.bodyHitbox), 1); 
+                        enemyHitboxes.splice(enemyHitboxes.indexOf(en.headHitbox), 1);
+                        enemies.splice(index, 1); 
+                    } 
+                }
             } 
         } 
-    } 
+    }
 }
 
-
-
-// Joypad Touch Eventek
+// ÚJ, FINOMÍTOTT ANALÓG MOBIL IRÁNYÍTÁS (Joystickkal)
 const zoneLeft = document.getElementById('zone-left'), zoneRight = document.getElementById('zone-right');
 const joyBase = document.getElementById('joy-base'), joyStick = document.getElementById('joy-stick');
 let leftTouchId = null, rightTouchId = null, joyStartX = 0, joyStartY = 0, lastLookX = 0, lastLookY = 0;
@@ -326,14 +341,12 @@ zoneLeft.addEventListener('touchstart', (e) => {
     leftTouchId = e.changedTouches[0].identifier; 
     joyStartX = e.changedTouches[0].clientX; 
     joyStartY = e.changedTouches[0].clientY; 
-    
-    // Joystick megjelenítése az ujj alatt
-    joyBase.classList.remove('hidden');
-    joyBase.style.left = joyStartX + 'px';
-    joyBase.style.top = joyStartY + 'px';
-    joyStick.style.left = '50%';
-    joyStick.style.top = '50%';
-    joyStick.style.transform = `translate(-50%, -50%)`;
+    if(joyBase) {
+        joyBase.classList.remove('hidden');
+        joyBase.style.left = joyStartX + 'px';
+        joyBase.style.top = joyStartY + 'px';
+        if(joyStick) joyStick.style.transform = `translate(-50%, -50%)`;
+    }
 });
 
 zoneLeft.addEventListener('touchmove', (e) => { 
@@ -344,26 +357,25 @@ zoneLeft.addEventListener('touchmove', (e) => {
             const dy = touch.clientY - joyStartY; 
             const angle = Math.atan2(dy, dx); 
             
-            // Távolság kiszámítása, max 40 pixel (analóg érzékelés)
             let distance = Math.min(Math.hypot(dx, dy), 40);
             let speedMultiplier = distance / 40; 
             
             moveX = Math.cos(angle) * speedMultiplier; 
             moveZ = Math.sin(angle) * speedMultiplier; 
             
-            // Kis joystick vizuális mozgatása a kereten belül
-            let stickX = Math.cos(angle) * distance;
-            let stickY = Math.sin(angle) * distance;
-            joyStick.style.transform = `translate(calc(-50% + ${stickX}px), calc(-50% + ${stickY}px))`;
+            if(joyStick) {
+                let stickX = Math.cos(angle) * distance;
+                let stickY = Math.sin(angle) * distance;
+                joyStick.style.transform = `translate(calc(-50% + ${stickX}px), calc(-50% + ${stickY}px))`;
+            }
         } 
     } 
 });
 
 zoneLeft.addEventListener('touchend', (e) => { 
     if (e.changedTouches[0].identifier === leftTouchId) { 
-        leftTouchId = null; 
-        moveX = moveZ = 0; 
-        joyBase.classList.add('hidden'); // Joystick elrejtése
+        leftTouchId = null; moveX = moveZ = 0; 
+        if(joyBase) joyBase.classList.add('hidden'); 
     } 
 });
 
@@ -375,14 +387,102 @@ zoneRight.addEventListener('touchmove', (e) => {
             yaw -= (touch.clientX - lastLookX) * 0.005; 
             pitch -= (touch.clientY - lastLookY) * 0.005; 
             pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch)); 
-            lastLookX = touch.clientX; 
-            lastLookY = touch.clientY; 
+            lastLookX = touch.clientX; lastLookY = touch.clientY; 
         } 
     } 
 });
 zoneRight.addEventListener('touchend', (e) => { if (e.changedTouches[0].identifier === rightTouchId) rightTouchId = null; });
 
+// ==========================================
+// ÚJ, IGAZI PC-S FPS IRÁNYÍTÁS (Egér rögzítése, WASD)
+// ==========================================
+const keys = { w: false, a: false, s: false, d: false };
 
+window.addEventListener('keydown', (e) => { let key = e.key.toLowerCase(); if (key in keys) keys[key] = true; });
+window.addEventListener('keyup', (e) => { let key = e.key.toLowerCase(); if (key in keys) keys[key] = false; });
+
+setInterval(() => {
+    if (gameState === 'PLAYING') {
+        let kmX = 0, kmZ = 0;
+        
+        // IRÁNYOK JAVÍTVA:
+        // A joystick matematikája alapján: -1 Z az előre, +1 Z a hátra.
+        if (keys.w) kmZ = -1; // W = Előre
+        if (keys.s) kmZ = 1;  // S = Hátra
+        if (keys.a) kmX = -1; // A = Balra
+        if (keys.d) kmX = 1;  // D = Jobbra
+        
+        if (kmX !== 0 || kmZ !== 0) { moveX = kmX; moveZ = kmZ; } 
+        else if (leftTouchId === null) { moveX = 0; moveZ = 0; }
+    }
+}, 16);
+
+document.body.addEventListener('click', (e) => {
+    // Csak a játéktéren kattintva rögzítse az egeret, menüben/bolton NE!
+    if (gameState === 'PLAYING' && document.pointerLockElement !== document.body) {
+        if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SELECT') {
+            document.body.requestPointerLock();
+        }
+    }
+});
+
+// NÉZELŐDÉS EGÉRREL (Csak akkor, ha az egér el van rejtve)
+window.addEventListener('mousemove', (e) => {
+    if (document.pointerLockElement === document.body && gameState === 'PLAYING') {
+        // Kicsit finomabb érzékenység (0.003), mert az egeret gyorsabb húzni, mint a képernyőt
+        yaw -= (e.movementX || 0) * 0.003;
+        pitch -= (e.movementY || 0) * 0.003;
+        pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
+    }
+});
+
+// GOMBOK: LÖVÉS (Bal) ÉS FEGYVER VÁLTÁS (Jobb)
+window.addEventListener('mousedown', (e) => {
+    // Csak akkor lőjön PC-n, ha a játék megy ÉS a kurzor el van rejtve (játék módban vagyunk)
+    if (gameState !== 'PLAYING' || document.pointerLockElement !== document.body) return;
+
+    if (e.button === 0) {
+        // BAL KLIKK: Lövés
+        isShootingBtnPressed = true; 
+        if(weapons[currentWeaponId].auto) autoShootTimer = weapons[currentWeaponId].fireRate;
+        handleShoot(); 
+    } else if (e.button === 2) {
+        // JOBB KLIKK: Fegyver váltás
+        if (typeof handleWeaponSwitch === 'function') handleWeaponSwitch(e);
+    }
+});
+
+// --- ÚJ: FAGYASZTÁS KÉPESSÉG AKTIVÁLÁSA ---
+function triggerFreeze() {
+    if (skills.freeze.level > 0 && freezeCooldown <= 0 && gameState === 'PLAYING') {
+        activeFreezeTimer = skills.freeze.level * 2; // Szintenként 2 másodperc
+        freezeCooldown = 30; // 30 mp újratöltés
+        
+        playSound('heal'); // Egyelőre a gyógyulás hangját használjuk jéghangnak
+        const iceOverlay = document.getElementById('ice-overlay');
+        if(iceOverlay) iceOverlay.style.opacity = 1;
+        
+        const fBtn = document.getElementById('freeze-btn');
+        if(fBtn) { fBtn.disabled = true; fBtn.innerText = `⏳ ${Math.ceil(freezeCooldown)}s`; }
+    }
+}
+
+// Mobilos gomb kattintás (Védett verzió)
+const freezeBtnEl = document.getElementById('freeze-btn');
+if (freezeBtnEl) {
+    freezeBtnEl.addEventListener('click', triggerFreeze);
+    freezeBtnEl.addEventListener('touchstart', (e) => { e.preventDefault(); triggerFreeze(); });
+}
+
+// PC gomb (F betű)
+window.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() === 'f') triggerFreeze();
+});
+
+
+
+// Alapértelmezett jobbklikk menü (böngésző menü) letiltása
+window.addEventListener('contextmenu', (e) => e.preventDefault());
 
 
 // ==========================================
@@ -392,80 +492,46 @@ zoneRight.addEventListener('touchend', (e) => { if (e.changedTouches[0].identifi
 window.startWaveCountdown = function() {
     let countdown = 10;
     const waveDisplay = document.getElementById('wave-display');
-    
-    if (waveDisplay) {
-        waveDisplay.innerText = `KÉSZÜLJ...JÖNNEK!: ${countdown}mp`; 
-        waveDisplay.classList.remove('hidden');
-    }
+    if (waveDisplay) { waveDisplay.innerText = `KÉSZÜLJ...JÖNNEK!: ${countdown}mp`; waveDisplay.classList.remove('hidden'); }
     
     const waveInterval = setInterval(() => {
         countdown--;
         if (countdown > 0) { 
             if (waveDisplay) waveDisplay.innerText = `KÉSZÜLJ...JÖNNEK!: ${countdown}mp`; 
-} else {
-                clearInterval(waveInterval); 
-                currentWave++; 
-                enemiesToSpawn += 2; 
-                let bossSpawning = (currentWave % 5 === 0); 
-                
-                if (typeof spawnEnemy === 'function') {
-                    for(let i=0; i<enemiesToSpawn; i++) spawnEnemy(getSafeSpawnPosition(enemyRadius, 10).x, getSafeSpawnPosition(enemyRadius, 10).z, bossSpawning && i===0);
-                }
-                
-                isWaveActive = true; 
-               
-                waveStartTime = clock.getElapsedTime(); 
-                
-                if (waveDisplay) {
-                    waveDisplay.innerText = `${currentWave}. HULLÁM`;
-                    setTimeout(() => waveDisplay.classList.add('hidden'), 2000);
-                }
+        } else {
+            clearInterval(waveInterval); currentWave++; enemiesToSpawn += 2; 
+            let bossSpawning = (currentWave % 5 === 0); 
+            if (typeof spawnEnemy === 'function') {
+                for(let i=0; i<enemiesToSpawn; i++) spawnEnemy(getSafeSpawnPosition(enemyRadius, 10).x, getSafeSpawnPosition(enemyRadius, 10).z, bossSpawning && i===0);
             }
+            isWaveActive = true; waveStartTime = clock.getElapsedTime(); 
+            if (waveDisplay) { waveDisplay.innerText = `${currentWave}. HULLÁM`; setTimeout(() => waveDisplay.classList.add('hidden'), 2000); }
+        }
     }, 1000);
 }
 
 window.startGame = function() {
     if (!zombieModel || !ammoModel || !healthModel || !fastZombieModel || !hiderZombieModel) { 
-        setTimeout(window.startGame, 500); 
-        return; 
+        setTimeout(window.startGame, 500); return; 
     }
     
-    // --- ÚJ: Garantáljuk, hogy minden fizikai változó valós szám legyen induláskor ---
-    window.moveX = 0; window.moveZ = 0; 
-    window.pitch = 0; window.yaw = 0; 
-    window.recoilPitch = 0; window.cameraShake = 0; 
-    window.baseCamY = 1.6; window.velocityY = 0; window.gravity = 0.005;
-    if (camera) camera.position.set(0, baseCamY, 0);
-    // ---------------------------------------------------------------------------------
-    
     gameState = 'PLAYING'; 
-    playerHealth = 100; 
-    playerArmor = 0; 
-    score = 0; 
-    currentWave = 1; 
-    enemiesToSpawn = 5; 
-    currentWeaponId = 'pistol';
+    playerHealth = 100; playerArmor = 0; score = 0; currentWave = 1; enemiesToSpawn = 5; currentWeaponId = 'pistol';
+    weapons.pistol.ammo = weapons.pistol.maxAmmo; weapons.pistol.reserve = weapons.pistol.maxReserve;
     
-    weapons.pistol.ammo = weapons.pistol.maxAmmo; 
-    weapons.pistol.reserve = weapons.pistol.maxReserve;
+    if (typeof updateUI === 'function') updateUI(); 
+    camera.position.set(0, 1.6, 0); // Visszaállítva biztonságos alapértékre
     
-    if (typeof updateUI === 'function') updateUI();
-    camera.position.set(0, baseCamY, 0);
-    
-    // Pálya takarítás
     const radarContainer = document.getElementById('radar');
     for (let i = 0; i < enemies.length; i++) { 
         scene.remove(enemies[i].mesh); 
         if (radarContainer && enemies[i].blip && enemies[i].blip.parentNode) radarContainer.removeChild(enemies[i].blip); 
     }
-    enemies.length = 0; 
-    enemyHitboxes.length = 0; 
-    
+    enemies.length = 0; enemyHitboxes.length = 0; 
     bloodStains.forEach(b => scene.remove(b)); bloodStains.length = 0;
     medkits.forEach(mk => scene.remove(mk.mesh)); medkits.length = 0; 
     ammoBoxes.forEach(ab => scene.remove(ab.mesh)); ammoBoxes.length = 0;
     
-    // Spawn
     if(typeof spawnEnemy === 'function') {
         for (let i = 0; i < enemiesToSpawn; i++) spawnEnemy(getSafeSpawnPosition(enemyRadius, 10).x, getSafeSpawnPosition(enemyRadius, 10).z);
     }
@@ -473,7 +539,6 @@ window.startGame = function() {
         for (let i = 0; i < 4; i++) spawnMedkit(getSafeSpawnPosition(0.5, 5).x, getSafeSpawnPosition(0.5, 5).z);
         for (let i = 0; i < 4; i++) spawnAmmoBox(getSafeSpawnPosition(0.4, 5).x, getSafeSpawnPosition(0.4, 5).z);
     }
-    
     isWaveActive = true;
 }
 
@@ -482,26 +547,19 @@ let currentBob = 0;
 function animate() {
     requestAnimationFrame(animate); 
     const delta = clock.getDelta();
-
-    // 1. Állapotellenőrzés
-    if (gameState !== 'PLAYING') { 
-        renderer.render(scene, camera); 
-        return; 
-    }
-
-// 2. Automata tüzelés logikája
-    let wpn = weapons[currentWeaponId];
     
-    if (autoShootTimer > 0) autoShootTimer -= delta;
-
-    if (isShootingBtnPressed && wpn.auto) {
-        if (autoShootTimer <= 0) {
-            handleShoot();
-            autoShootTimer = wpn.fireRate;
-        }
+    if (gameState !== 'PLAYING') { 
+        renderer.render(scene, camera); return; 
     }
 
-    // Effektek frissítése
+    // JAVÍTOTT Automata tüzelés logikája
+    let wpn = weapons[currentWeaponId];
+    if (autoShootTimer > 0) autoShootTimer -= delta;
+    if (isShootingBtnPressed && wpn.auto && autoShootTimer <= 0) {
+        handleShoot();
+        autoShootTimer = wpn.fireRate;
+    }
+
     if (damageCooldown > 0) damageCooldown -= delta;
     if (muzzleFlash.intensity > 0) muzzleFlash.intensity = Math.max(0, muzzleFlash.intensity - delta * 30);
     if (gunMixer) gunMixer.update(delta);
@@ -511,119 +569,152 @@ function animate() {
         screenBlood.style.opacity = Math.max(0, parseFloat(screenBlood.style.opacity) - delta * 0.4);
     }
     
-    // Rádióaktív részecskék mozgatása
+ // Részecskék organikus lebegése
     const positions = radSystem.geometry.attributes.position.array;
-    for (let i = 1; i < positions.length; i += 3) { 
-        positions[i] += delta * 0.5; 
-        if (positions[i] > 10) positions[i] = 0; 
+    const time = clock.getElapsedTime();
+    for (let i = 0; i < positions.length; i += 3) { 
+        positions[i + 1] += delta * 0.3; // Lassú emelkedés (Y tengely)
+        positions[i] += Math.sin(time * 1.5 + positions[i+1]) * delta * 0.5; // Hullámzás (X)
+        positions[i + 2] += Math.cos(time * 1.5 + positions[i+1]) * delta * 0.5; // Hullámzás (Z)
+        
+        if (positions[i + 1] > 10) positions[i + 1] = 0; 
     }
     radSystem.geometry.attributes.position.needsUpdate = true;
 
-    // Lámpa pislákolás
     playerLight.intensity = Math.random() < 0.1 ? Math.random() * 0.6 : 0.6 + Math.random() * 0.2;
     playerLight.position.copy(camera.position);
 
-    // Radar letapogató
     radarAngle -= delta * 3.5; 
     let displayAngle = radarAngle % (Math.PI * 2); 
     if (displayAngle < 0) displayAngle += Math.PI * 2;
     const radarScanner = document.querySelector('.radar-scanner');
     if (radarScanner) radarScanner.style.transform = `translate(0, -50%) rotate(${displayAngle}rad)`;
 
-// Hullám menedzser és Bolt (Bónusz számolással)
+    // Bolt nyitása és EGÉR VISSZAADÁSA
     if (isWaveActive && enemies.length === 0) {
         isWaveActive = false; 
-        
         let waveDuration = clock.getElapsedTime() - waveStartTime;
-        let parTime = enemiesToSpawn * 4; // Célidő: kb. 4 másodperc / zombi
+        let parTime = enemiesToSpawn * 4; 
         lastWaveBonus = 0;
-        
         if (waveDuration < parTime) {
-            // Megspórolt másodpercenként 10 Pénz bónusz
             let savedSeconds = Math.floor(parTime - waveDuration);
             lastWaveBonus = savedSeconds * 10;
             score += lastWaveBonus;
             if (typeof updateUI === 'function') updateUI();
         }
-        
+        document.exitPointerLock(); // <-- Visszaadjuk az egeret a bolthoz!
         if (typeof openShop === 'function') openShop(); 
     }
 
     // Kamera Rázkódás, Visszarúgás és Lépkedés
+    if (isNaN(pitch)) pitch = 0; if (isNaN(yaw)) yaw = 0;
     recoilPitch = Math.max(0, recoilPitch - delta * 1.5);
     camera.quaternion.setFromEuler(new THREE.Euler(pitch + recoilPitch, yaw, 0, 'YXZ'));
     
     let shakeX = 0, shakeY = 0;
     if (cameraShake > 0) {
-        shakeX = (Math.random() - 0.5) * cameraShake;
-        shakeY = (Math.random() - 0.5) * cameraShake;
+        shakeX = (Math.random() - 0.5) * cameraShake; shakeY = (Math.random() - 0.5) * cameraShake;
         cameraShake -= delta;
     }
     
-    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); forward.y = 0; forward.normalize();
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); 
+    forward.y = 0; 
+    if (forward.lengthSq() > 0.001) forward.normalize(); else forward.set(0,0,-1);
+    
     const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion); right.y = 0; right.normalize();
     
-    let nextX = camera.position.x + forward.x*(moveZ*-0.15) + right.x*(moveX*0.15);
-    let nextZ = camera.position.z + forward.z*(moveZ*-0.15) + right.z*(moveX*0.15);
+  // Sebesség növelése a képesség alapján (+20% szintenként)
+    let speedMult = 0.15 * (1 + (skills.speed.level * 0.2));
+    let nextX = camera.position.x + forward.x*(moveZ*-speedMult) + right.x*(moveX*speedMult);
+    let nextZ = camera.position.z + forward.z*(moveZ*-speedMult) + right.z*(moveX*speedMult);
     
     if (!checkWallCollision(nextX, camera.position.z, playerRadius)) camera.position.x = nextX;
     if (!checkWallCollision(camera.position.x, nextZ, playerRadius)) camera.position.z = nextZ;
 
-    velocityY -= gravity; 
-    baseCamY += velocityY; 
+    velocityY -= gravity; baseCamY += velocityY; 
     if (baseCamY < 1.6) { baseCamY = 1.6; velocityY = 0; }
     
     const speed = Math.hypot(moveX, moveZ); 
-    if (speed > 0.05) { 
-        bobTime += delta * 12; 
-        currentBob = Math.sin(bobTime) * 0.06; 
-    } else { 
-        currentBob += (0 - currentBob) * delta * 10; 
+    if (speed > 0.05) { bobTime += delta * 12; currentBob = Math.sin(bobTime) * 0.06; } 
+    else { currentBob += (0 - currentBob) * delta * 10; }
+    
+    // --- JAVÍTÁS: A rázkódás csak ideiglenes eltolás (rendereléshez), nem módosítja a fizikai pozíciót! ---
+    let savedCamX = camera.position.x;
+    camera.position.x += shakeX;
+    camera.position.y = baseCamY + currentBob + shakeY;
+
+// --- FAGYASZTÁS COOLDOWN ÉS EFFEKT ---
+    if (activeFreezeTimer > 0) {
+        activeFreezeTimer -= delta;
+        if (activeFreezeTimer <= 0 && document.getElementById('ice-overlay')) document.getElementById('ice-overlay').style.opacity = 0;
+    }
+    if (freezeCooldown > 0) {
+        freezeCooldown -= delta;
+        const fBtn = document.getElementById('freeze-btn');
+        if (fBtn && activeFreezeTimer <= 0) {
+            fBtn.innerText = freezeCooldown > 0 ? `⏳ ${Math.ceil(freezeCooldown)}s` : `❄️ FAGYASZTÁS`;
+            if (freezeCooldown <= 0) fBtn.disabled = false;
+        }
     }
     
-    camera.position.y = baseCamY + currentBob + shakeY;
-    camera.position.x += shakeX;
+    // --- Sérthetetlenség (Revive után) ---
+    if (invincibilityTimer > 0) invincibilityTimer -= delta;
 
-    // Zombik AI Logika
+    // --- Zombik AI ---
     for (let i = 0; i < enemies.length; i++) {
         const en = enemies[i]; 
-        if (en.mixer) en.mixer.update(delta);
-        const distToPlayer = Math.hypot(camera.position.x - en.mesh.position.x, camera.position.z - en.mesh.position.z);
         
-        // Támadás
+        // Ha fagyasztás van, a zombi nem mozog és az animáció is megáll!
+        if (activeFreezeTimer > 0) {
+            if (en.mixer) en.mixer.timeScale = 0; 
+            continue; // Ugrás a következő zombira (nem támad, nem mozog)
+        } else {
+            if (en.mixer) { en.mixer.timeScale = 1; en.mixer.update(delta); }
+        }
+
+        const distToPlayer = Math.hypot(savedCamX - en.mesh.position.x, camera.position.z - en.mesh.position.z);
+ 
+       
         if (distToPlayer <= 3.0) {
             const stats = difficultySettings[currentDifficulty];
             let rawDamage = stats.damage * en.damageMult; 
-            
-            // Páncél logika
             if (playerArmor > 0) {
                 let block = Math.min(playerArmor, rawDamage * 2); 
-                playerArmor -= block;
-                rawDamage -= block / 2;
+                playerArmor -= block; rawDamage -= block / 2;
             }
             if (rawDamage > 0) playerHealth -= rawDamage;
             
             if (typeof updateUI === 'function') updateUI(); 
             if (screenBlood) screenBlood.style.opacity = 1.0;
             
-            if (damageCooldown <= 0) { 
-                playSound('hurt'); 
-                damageCooldown = 1.0; 
-                cameraShake = 0.5; 
-            } 
+            if (damageCooldown <= 0) { playSound('hurt'); damageCooldown = 1.0; cameraShake = 0.5; } 
             
-            if (playerHealth <= 0 && gameState !== 'GAMEOVER') {
-                gameState = 'GAMEOVER'; 
-                document.getElementById('final-score').innerText = `PÉNZ: ${score}`; 
-                document.getElementById('final-wave').innerText = `TÚLÉLT HULLÁMOK: ${currentWave}`; 
-                document.getElementById('game-over').classList.remove('hidden');
+// Halál ÉS Újraéledés (Revive) mechanika
+            if (playerHealth <= 0) {
+                if (skills.revive.level > 0 && gameState === 'PLAYING') {
+                    // FELÉLEDÉS!
+                    skills.revive.level--;
+                    playerHealth = 100 + (skills.maxHealth.level * 20); // Max életre gyógyul
+                    invincibilityTimer = 2.0; // 2 másodperc I-Frame
+                    playSound('heal'); // Használjuk a gyógyulás hangját éledéskor
+                    
+                    // Képernyő villanás
+                    const healFlash = document.getElementById('heal-flash');
+                    if (healFlash) { healFlash.style.opacity = 1; setTimeout(() => healFlash.style.opacity = 0, 500); }
+                    if (typeof updateUI === 'function') updateShopButtons(); // Frissítjük a bolt gombot is
+                } 
+                else if (gameState !== 'GAMEOVER') {
+                    // VÉGLEGES HALÁL
+                    gameState = 'GAMEOVER'; 
+                    document.exitPointerLock(); 
+                    document.getElementById('final-score').innerText = `PÉNZ: ${score}`; 
+                    document.getElementById('final-wave').innerText = `TÚLÉLT HULLÁMOK: ${currentWave}`; 
+                    document.getElementById('game-over').classList.remove('hidden');
+                }
             }
-        } 
-        // Mozgás (Követés + Szeparáció + Falon csúszás)
-        else {
-            const enemyDir = new THREE.Vector3().subVectors(camera.position, en.mesh.position).normalize(); 
-            enemyDir.y = 0; 
-            en.mesh.lookAt(camera.position.x, 0, camera.position.z); 
+        } else {
+            const enemyDir = new THREE.Vector3().subVectors(new THREE.Vector3(savedCamX, 0, camera.position.z), en.mesh.position).normalize(); 
+            enemyDir.y = 0; en.mesh.lookAt(savedCamX, 0, camera.position.z); 
             
             let sep = new THREE.Vector3();
             for (let j = 0; j < enemies.length; j++) {
@@ -635,109 +726,71 @@ function animate() {
                 }
             }
             
-            let mX = (enemyDir.x * en.speed) + sep.x; 
-            let mZ = (enemyDir.z * en.speed) + sep.z;
-            
+            let mX = (enemyDir.x * en.speed) + sep.x; let mZ = (enemyDir.z * en.speed) + sep.z;
             if (!checkWallCollision(en.mesh.position.x + mX, en.mesh.position.z, enemyRadius)) en.mesh.position.x += mX;
             if (!checkWallCollision(en.mesh.position.x, en.mesh.position.z + mZ, enemyRadius)) en.mesh.position.z += mZ;
         }
 
-        // Radar frissítés
         if (en.blip) {
-            const localPos = en.mesh.position.clone(); 
-            camera.worldToLocal(localPos);
-            en.blip.style.left = (50 + localPos.x * 1.2) + '%'; 
-            en.blip.style.top = (50 + localPos.z * 1.2) + '%';
+            const localPos = en.mesh.position.clone(); camera.worldToLocal(localPos);
+            en.blip.style.left = (50 + localPos.x * 1.2) + '%'; en.blip.style.top = (50 + localPos.z * 1.2) + '%';
             
-            let targetAngle = Math.atan2(localPos.z, localPos.x); 
-            if (targetAngle < 0) targetAngle += Math.PI * 2;
-            let diff = Math.abs(targetAngle - displayAngle); 
-            if (diff > Math.PI) diff = Math.PI * 2 - diff;
-            
-            if (diff < 0.3) en.blip.classList.add('visible'); 
-            else en.blip.classList.remove('visible');
+            let targetAngle = Math.atan2(localPos.z, localPos.x); if (targetAngle < 0) targetAngle += Math.PI * 2;
+            let diff = Math.abs(targetAngle - displayAngle); if (diff > Math.PI) diff = Math.PI * 2 - diff;
+            if (diff < 0.3) en.blip.classList.add('visible'); else en.blip.classList.remove('visible');
         }
     }
 
-
-// Loot felvétel és Részecskék mozgása
     for (let i = medkits.length - 1; i >= 0; i--) { 
-        const mk = medkits[i]; 
-        mk.floatTime += 0.05; 
-        mk.mesh.position.y = mk.startY + Math.sin(mk.floatTime) * 0.3; 
-        
-        if (Math.hypot(camera.position.x - mk.mesh.position.x, camera.position.z - mk.mesh.position.z) < 1.5) { 
-            // EZ A SOR JÁTSSZA LE A HANGOT
+        const mk = medkits[i]; mk.floatTime += 0.05; mk.mesh.position.y = mk.startY + Math.sin(mk.floatTime) * 0.3; 
+if (Math.hypot(savedCamX - mk.mesh.position.x, camera.position.z - mk.mesh.position.z) < 1.5) { 
             playSound('heal'); 
-            
             const healFlash = document.getElementById('heal-flash');
-            if (healFlash) {
-                healFlash.style.opacity = 1;
-                setTimeout(() => healFlash.style.opacity = 0, 200);
-            }
+            if (healFlash) { healFlash.style.opacity = 1; setTimeout(() => healFlash.style.opacity = 0, 200); }
             
-            playerHealth = Math.min(100, playerHealth + 40); 
+            // ÉLET LOOT FEJLESZTÉS:
+            let maxHP = 100 + (skills.maxHealth.level * 20);
+            let healAmount = 40 * (1 + (skills.healthLoot.level * 0.2));
+            playerHealth = Math.min(maxHP, playerHealth + healAmount); 
+            
             if (typeof updateUI === 'function') updateUI(); 
-            scene.remove(mk.mesh); 
-            medkits.splice(i, 1); 
+            scene.remove(mk.mesh); medkits.splice(i, 1); 
             setTimeout(() => { if(gameState === 'PLAYING' && typeof spawnMedkit === 'function') spawnMedkit(getSafeSpawnPosition(0.5, 5).x, getSafeSpawnPosition(0.5, 5).z); }, 5000); 
-        } 
+        }
     }
     
-for (let i = ammoBoxes.length - 1; i >= 0; i--) { 
-        const ab = ammoBoxes[i]; 
-        ab.floatTime += 0.05; 
-        ab.mesh.position.y = ab.startY + Math.sin(ab.floatTime) * 0.2; 
-        
-        if (Math.hypot(camera.position.x - ab.mesh.position.x, camera.position.z - ab.mesh.position.z) < 1.5) { 
+    for (let i = ammoBoxes.length - 1; i >= 0; i--) { 
+        const ab = ammoBoxes[i]; ab.floatTime += 0.05; ab.mesh.position.y = ab.startY + Math.sin(ab.floatTime) * 0.2; 
+        if (Math.hypot(savedCamX - ab.mesh.position.x, camera.position.z - ab.mesh.position.z) < 1.5) { 
             playSound('ammo'); 
-            
             const ammoFlash = document.getElementById('ammo-flash'); 
-            if(ammoFlash) { 
-                ammoFlash.style.opacity = 1; 
-                setTimeout(() => ammoFlash.style.opacity = 0, 200); 
-            }
-            
+            if(ammoFlash) { ammoFlash.style.opacity = 1; setTimeout(() => ammoFlash.style.opacity = 0, 200); }
+           // LŐSZER LOOT FEJLESZTÉS:
             let w = weapons[currentWeaponId]; 
-            w.reserve = Math.min(w.maxReserve, w.reserve + w.maxAmmo * 2); 
+            let ammoAmount = w.maxAmmo * 2 * (1 + (skills.ammoLoot.level * 0.2));
+            w.reserve = Math.min(w.maxReserve, Math.floor(w.reserve + ammoAmount));
             if (typeof updateUI === 'function') updateUI(); 
-            scene.remove(ab.mesh); 
-            ammoBoxes.splice(i, 1); 
+            scene.remove(ab.mesh); ammoBoxes.splice(i, 1); 
             setTimeout(() => { if(gameState === 'PLAYING' && typeof spawnAmmoBox === 'function') spawnAmmoBox(getSafeSpawnPosition(0.4, 5).x, getSafeSpawnPosition(0.4, 5).z); }, 5000); 
         } 
     }
     
     for (let i = particles.length - 1; i >= 0; i--) { 
-        let p = particles[i]; 
-        p.life -= 0.02; 
-        p.vy -= 0.02; 
-        p.mesh.position.x += p.vx; 
-        p.mesh.position.y += p.vy; 
-        p.mesh.position.z += p.vz; 
-        if (p.life <= 0) { 
-            scene.remove(p.mesh); 
-            particles.splice(i, 1); 
-        } 
+        let p = particles[i]; p.life -= 0.02; p.vy -= 0.02; 
+        p.mesh.position.x += p.vx; p.mesh.position.y += p.vy; p.mesh.position.z += p.vz; 
+        if (p.life <= 0) { scene.remove(p.mesh); particles.splice(i, 1); } 
     }
 
-    // --- ÚJ: Biztonsági háló NaN mérgezés ellen (Ha elszáll a matek, visszatesz középre) ---
-    if (isNaN(camera.position.x) || isNaN(camera.position.y) || isNaN(camera.position.z)) {
-        camera.position.set(0, 1.6, 0);
-    }
-    // --------------------------------------------------------------------------------------
-
-    // --- JÁTÉKOS POZÍCIÓJÁNAK KORLÁTOZÁSA (Falba lökés ellen) ---
-    const playerLimit = 23.5; // A fal belső síkja. (Így a kamera nem mehet át rajta)
-    camera.position.x = Math.max(-playerLimit, Math.min(playerLimit, camera.position.x));
-    camera.position.z = Math.max(-playerLimit, Math.min(playerLimit, camera.position.z));
-    
     renderer.render(scene, camera);
+    
+    // VISSZAÁLLÍTJUK A KORÁBBI X POZÍCIÓT (így nem sodródunk bele a falba)
+    camera.position.x = savedCamX;
 }
+
 const shootBtn = document.getElementById('shoot-btn');
 if(shootBtn) {
     shootBtn.addEventListener('touchstart', (e) => { 
-        e.preventDefault(); 
-        isShootingBtnPressed = true; 
+        e.preventDefault(); isShootingBtnPressed = true; 
         if(weapons[currentWeaponId].auto) autoShootTimer = weapons[currentWeaponId].fireRate;
         handleShoot(e); 
     });
@@ -750,32 +803,11 @@ if(shootBtn) {
     shootBtn.addEventListener('mouseup', () => { isShootingBtnPressed = false; });
 }
 
-// ==========================================
-// KÉPERNYŐ ÁTMÉRETEZÉSÉNEK KEZELÉSE (Képarány és célkereszt javítása)
-// ==========================================
-function resizeGame() {
+window.addEventListener('resize', () => {
     if (camera && renderer) {
-        // Frissítjük a kamera képarányát
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
-        // Frissítjük a renderelő felbontását az új, immár teljes képernyős méretre
         renderer.setSize(window.innerWidth, window.innerHeight);
-
-        // ÚJ: Kényszerítjük a UI konténert, hogy pixelre pontosan egyezzen a játéktérrel
-        const uiWrapper = document.getElementById('game-ui-wrapper');
-        if (uiWrapper) {
-            uiWrapper.style.width = window.innerWidth + 'px';
-            uiWrapper.style.height = window.innerHeight + 'px';
-        }
     }
-}
-
-// Alap átméretezés figyelése
-window.addEventListener('resize', resizeGame);
-
-// ÚJ: Külön figyeljük a teljes képernyős váltást, és adunk neki egy kis időt (200ms), 
-// amíg a mobil animációja befejeződik, mielőtt újraszámolnánk a pontos méreteket és a lövés irányát.
-document.addEventListener('fullscreenchange', () => setTimeout(resizeGame, 200));
-document.addEventListener('webkitfullscreenchange', () => setTimeout(resizeGame, 200));
-
+});
 animate();
