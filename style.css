@@ -2,26 +2,93 @@
 
 body { margin: 0; overflow: hidden; background: #000; touch-action: none; user-select: none; -webkit-user-select: none; font-family: 'Share Tech Mono', monospace; }
 
-/* Menü stílusok */
+/* ==========================================
+   TÖLTŐKÉPERNYŐ (Loading Screen)
+   ========================================== */
+#loading-screen {
+    position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+    background-color: #000;
+    background-image: url('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/00ad21b70dad334c3614f776895e17d20e34f833/Loading.jpeg');
+    background-size: cover; background-position: center;
+    display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+    z-index: 9999; /* Legfelül van minden felett */
+    transition: opacity 1.5s ease-in-out; /* Finom eltűnés */
+    padding-bottom: 10%;
+}
+
+.loading-content {
+    background: rgba(0, 20, 0, 0.8);
+    border: 2px solid #00ff00; border-radius: 10px;
+    padding: 20px 40px; text-align: center;
+    box-shadow: 0 0 30px rgba(0, 255, 0, 0.4), inset 0 0 20px #000;
+    backdrop-filter: blur(5px);
+}
+
+.loading-text { color: #00ff00; font-size: 24px; letter-spacing: 3px; text-shadow: 0 0 10px #00ff00; margin-bottom: 15px; }
+#loading-status { color: #88ff88; font-size: 14px; margin-top: 10px; font-family: monospace; }
+
+/* Radioaktív Kémcső */
+.radioactive-tube {
+    width: 300px; height: 30px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 3px solid rgba(255, 255, 255, 0.3); /* Üveg hatás */
+    border-radius: 15px;
+    box-shadow: inset 0 5px 10px rgba(0,0,0,0.8), 0 0 10px rgba(0, 255, 0, 0.2);
+    overflow: hidden; position: relative;
+    padding: 2px;
+}
+
+/* Folyadék benne */
+#radioactive-liquid {
+    height: 100%; width: 0%; /* Ezt animáljuk JS-ből */
+    background: linear-gradient(90deg, #005500 0%, #00ff00 50%, #aaffaa 100%);
+    border-radius: 10px;
+    box-shadow: 0 0 20px #00ff00, inset 0 0 10px #fff;
+    transition: width 0.3s ease-out;
+}
+/* Buborék effekt a folyadékban */
+#radioactive-liquid::after {
+    content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.2) 10px, rgba(255,255,255,0.2) 20px);
+    animation: moveBubbles 1s linear infinite;
+}
+@keyframes moveBubbles { 0% { background-position: 0 0; } 100% { background-position: 40px 0; } }
+
+/* ==========================================
+   ÉLŐ 3D FŐMENÜ KINÉZET
+   ========================================== */
 #main-menu {
     position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
-    background: radial-gradient(circle, #1a0000 0%, #000000 100%);
+    background: transparent; /* Átlátszó, hogy lássuk a 3D-t! */
     display: flex; flex-direction: column; justify-content: center; align-items: center;
-    z-index: 200; color: #ff0000;
+    z-index: 200;
 }
-#main-menu h1 { font-size: 50px; margin-bottom: 10px; text-shadow: 0 0 20px #ff0000; text-align: center; }
-#high-score-display { color: #00ff00; font-size: 24px; margin-bottom: 40px; text-shadow: 0 0 10px #00ff00; }
-.menu-options { margin-bottom: 40px; font-size: 20px; color: #fff; text-align: center; }
-.menu-options select {
-    font-family: 'Share Tech Mono', monospace; font-size: 20px;
-    background: #222; color: #fff; border: 1px solid #ff0000; padding: 5px; margin-left: 10px; outline: none;
+
+.menu-box {
+    background: rgba(5, 15, 5, 0.85); border: 2px solid #00aa00; border-radius: 15px;
+    padding: 40px; text-align: center; box-shadow: 0 0 30px #00ff00, inset 0 0 50px #000;
+    backdrop-filter: blur(10px);
 }
-#start-game-btn {
-    padding: 15px 40px; font-size: 28px; font-family: 'Share Tech Mono', monospace;
-    background: #550000; color: #fff; border: 2px solid #ff0000; border-radius: 5px;
-    cursor: pointer; box-shadow: 0 0 15px rgba(255,0,0,0.5); pointer-events: auto;
+
+.menu-box h1 { font-size: 60px; color: #fff; text-shadow: 0 0 15px #00ff00; margin: 0 0 10px 0; line-height: 1.1; letter-spacing: 5px; }
+.menu-box h1 .highlight { color: #00ff00; font-size: 70px; }
+#high-score-display { color: #ffcc00; font-size: 24px; font-weight: bold; text-shadow: 0 0 10px #ffaa00; margin-bottom: 30px; }
+
+.menu-options { margin-bottom: 40px; color: #aaa; font-size: 18px; }
+.cyber-select {
+    font-family: 'Share Tech Mono', monospace; font-size: 18px; background: rgba(0, 30, 0, 0.8);
+    color: #00ff00; border: 1px solid #00ff00; padding: 10px; margin-left: 10px; cursor: pointer; outline: none;
 }
-#start-game-btn:active { background: #ff0000; color: #000; }
+
+.cyber-btn {
+    padding: 15px 40px; font-size: 24px; font-family: 'Share Tech Mono', monospace;
+    background: rgba(0, 50, 0, 0.8); color: #00ff00; border: 2px solid #00ff00;
+    border-radius: 5px; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 2px;
+    box-shadow: 0 0 15px rgba(0, 255, 0, 0.2), inset 0 0 10px rgba(0, 255, 0, 0.2);
+}
+.cyber-btn:hover { background: #00ff00; color: #000; box-shadow: 0 0 30px #00ff00; transform: scale(1.05); }
+
+
 
 /* Játék UI */
 #ui-layer { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; display: flex; z-index: 10; }
