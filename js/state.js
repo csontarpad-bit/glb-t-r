@@ -65,10 +65,15 @@ var medkits = [];
 var ammoBoxes = [];
 var particles = [];
 var radParticles = []; 
-var bloodStains = []; 
+var toxicPuddles = []; 
+var toxicTickTimer = 0; 
 
 var scene, camera, renderer, clock, listener, muzzleFlash, playerLight;
 var gunMixer, gunShootAction;
 var zombieModel, zombieAnimations, ammoModel, healthModel;
 var fastZombieModel, fastZombieAnimations;
 var hiderZombieModel, hiderZombieAnimations;
+var crawlerModel, crawlerAnimations;
+// --- ÚJ ---
+var bossModel, bossAnimations;
+var tankModel, tankAnimations;
