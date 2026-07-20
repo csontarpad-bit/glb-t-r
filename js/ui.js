@@ -45,6 +45,7 @@ window.openShop = function() {
 document.getElementById('close-shop-btn').addEventListener('click', () => {
     shopMenu.classList.add('hidden');
     gameState = 'PLAYING'; // Játék folytatása
+    document.body.requestPointerLock(); // <-- ÚJ: Azonnal visszazárja az egeret!
     if (typeof startWaveCountdown === 'function') startWaveCountdown(); 
 });
 
@@ -156,7 +157,40 @@ window.updateShopButtons = function() {
             btn.innerHTML = getBtnHTML(displayName, "Állapot: MAX SZINT", "---"); 
             btn.disabled = true; 
         }
-        btn.onclick = () => upgradeSkill(id);
+btn.onclick = () => upgradeSkill(id);
+    }
+
+    // ÚJ: Takarító (Sterilizáló) gomb logikája
+    const puddleCountDisplay = document.getElementById('puddle-count');
+    if (puddleCountDisplay) puddleCountDisplay.innerText = toxicPuddles.length;
+
+    const cleanBtn = document.getElementById('buy-clean');
+    if (cleanBtn) {
+        let amountToClean = Math.min(10, toxicPuddles.length); // Max 10, vagy ami maradt
+        let cost = amountToClean * 1; // 1 CR / pocsolya
+        
+        if (toxicPuddles.length === 0) {
+            cleanBtn.innerHTML = getBtnHTML("STERILIZÁLÁS", "A pálya tiszta.", "ÁR: 0 CR");
+            cleanBtn.disabled = true;
+        } else {
+            cleanBtn.innerHTML = getBtnHTML("STERILIZÁLÁS (10 db)", `Célpontok: ${amountToClean} toxikus góc`, `ÁR: ${cost} CR`);
+            cleanBtn.disabled = (score < cost);
+        }
+        
+        cleanBtn.onclick = () => {
+            if (toxicPuddles.length > 0 && score >= cost) {
+                score -= cost;
+                for (let i = 0; i < amountToClean; i++) {
+                    let oldestPuddle = toxicPuddles.shift(); // Legrégebbi kivétele
+                    scene.remove(oldestPuddle);
+                    oldestPuddle.geometry.dispose(); // MEMÓRIA FELSZABADÍTÁS!
+                }
+                if (typeof playSound === 'function') playSound('heal');
+                updateShopButtons(); 
+            } else {
+                flashMoneyError();
+            }
+        };
     }
 }
 
@@ -205,7 +239,7 @@ document.getElementById('start-game-btn').addEventListener('click', (e) => {
     let elem = document.documentElement;
     if (elem.requestFullscreen) elem.requestFullscreen().catch(e=>{});
     else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
-    
+     document.body.requestPointerLock();
     // --- ÚJ: FADE ÁTMENET ÉS ELALVÁS ---
     const fadeOverlay = document.getElementById('fade-overlay');
     if (fadeOverlay) fadeOverlay.style.opacity = '1';
