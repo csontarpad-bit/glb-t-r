@@ -85,7 +85,9 @@ function loadSound(name, url, volume = 1.0, isLoop = false) {
         if (name === 'music' && listener.context.state === 'running') sound.play();
     });
 }
-
+loadSound('bossAttack', 'https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/7881058577cd484c3ba7beba64556801e1704209/boss%20screem.mp3', 1.0);
+loadSound('cry', 'https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/40bf509427fc680fb017d8e5c47594250ad9ae93/cry.mp3', 1.0);
+loadSound('glitch', 'https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/102a0d507c37ef59b9aeb075e1b30110c95f3b3f/noice02.mp3', 1.0);
 loadSound('music', 'https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/f162302b83992b9adfe75b1c3ade387a25e2478d/music.mp3', 0.3, true); 
 loadSound('menuMusic', 'https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/212958c21ddceb0db80820c1d91b06b7d9a5a950/main.m4a', 0.5, true); 
 loadSound('ammo', 'https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/7bc7874a7ddc6802b16f0d3eafb82b2b4860e125/ammo%20box.mp3', 1.0);
@@ -166,7 +168,22 @@ window.checkWallCollision = function(x, z, r) {
 
 const gltfLoader = new THREE.GLTFLoader();
 
-// VISSZAÁLLÍTVA A RÉGI MŰKÖDŐ BETÖLTÉSRE (nincs undefined paraméter)
+gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/6100b7a688723ad1b3a67403b99e8dbaf82fc040/three-head.glb', (gltf) => { 
+    bossModel = gltf.scene; bossAnimations = gltf.animations; 
+    bossModel.traverse((c) => { if(c.isMesh) c.frustumCulled = false; }); 
+});
+
+gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/7e6d7e06a66a6c9df5665f7df2a92cdfb14846d7/tankv2.glb', (gltf) => { 
+    tankModel = gltf.scene; tankAnimations = gltf.animations; 
+    tankModel.traverse((c) => { if(c.isMesh) c.frustumCulled = false; }); 
+});
+
+gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/3530b5fab56eb32e0fe925babfef2db89bd2b1ac/crying_head_2.glb', (gltf) => { 
+    crawlerModel = gltf.scene; 
+    crawlerAnimations = gltf.animations; 
+    crawlerModel.traverse((c) => { if(c.isMesh) c.frustumCulled = false; }); 
+});
+
 gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/8c7271b0135d22428617169177fe45e31e6aecf7/ultrakill_alternate_revolver.glb', (gltf) => { 
     const gunMesh = gltf.scene; 
     gunMesh.scale.set(3, 3, 3); 
@@ -187,7 +204,7 @@ gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/main/z
     zombieModel.traverse((c) => { if(c.isMesh) c.frustumCulled = false; }); 
 });
 
-gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/6aa130a4c148ae5e16855905c4a15b9978e974ee/Fast%20zombie.glb', (gltf) => { 
+gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/0214d22fe4ca2284df78cbf1eb8f820834651f9a/runerv2.glb', (gltf) => { 
     fastZombieModel = gltf.scene; 
     fastZombieAnimations = gltf.animations; 
     fastZombieModel.traverse((c) => { if(c.isMesh) c.frustumCulled = false; }); 
@@ -202,15 +219,44 @@ gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/6aa130
 gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/db069dbbe97f2d9cd71985c37eb64dad31848434/ammo.glb', (gltf) => { ammoModel = gltf.scene; });
 gltfLoader.load('https://raw.githubusercontent.com/csontarpad-bit/glb-t-r/db069dbbe97f2d9cd71985c37eb64dad31848434/health.glb', (gltf) => { healthModel = gltf.scene; });
 
-function createBloodStain(x, z) {
-    const geo = new THREE.CircleGeometry(1.2 + Math.random() * 0.8, 32);
-    const mat = new THREE.MeshBasicMaterial({ color: 0x440000, transparent: true, opacity: 0.7, depthWrite: false });
-    const mesh = new THREE.Mesh(geo, mat);
+function createToxicPuddle(x, z) {
+    const baseRadius = 0.7 + Math.random() * 0.4;
+    // 1. Felvisszük 32 szegmensre, hogy szép íves lehessen a széle
+    const geo = new THREE.CircleGeometry(baseRadius, 32); 
+
+    const posAttribute = geo.attributes.position;
+    
+    // Generálunk két véletlenszerű kezdőértéket, hogy minden pocsolya más alakú legyen
+    const phase1 = Math.random() * Math.PI * 2;
+    const phase2 = Math.random() * Math.PI * 2;
+
+    for (let i = 1; i < posAttribute.count; i++) {
+        let vx = posAttribute.getX(i);
+        let vy = posAttribute.getY(i);
+
+        // Kiszámoljuk az adott pont szögét a körön belül
+        let angle = Math.atan2(vy, vx);
+
+        // 2. ORGANIKUS FORMA: Szinusz hullámokkal lágyan torzítjuk
+        // Ez 3 és 5 "hullámot" rak a kör köré, ami teljesen sima paca formát ad
+        let distort = 1.0 
+                    + 0.15 * Math.sin(angle * 3 + phase1) 
+                    + 0.10 * Math.cos(angle * 5 + phase2);
+
+        posAttribute.setX(i, vx * distort);
+        posAttribute.setY(i, vy * distort);
+    }
+    
+    geo.computeVertexNormals(); // Frissíti a felületet a fényekhez
+
+    const mesh = new THREE.Mesh(geo, globalToxicMat); 
     mesh.rotation.x = -Math.PI / 2;
-    mesh.rotation.z = Math.random() * Math.PI;
+    // Forgatás, hogy még változatosabb legyen
+    mesh.rotation.z = Math.random() * Math.PI; 
     mesh.position.set(x, 0.02, z);
+    
     scene.add(mesh);
-    bloodStains.push(mesh);
+    toxicPuddles.push(mesh);
 }
 
 
@@ -273,14 +319,15 @@ window.handleShoot = function(e) {
             const cylinder = new THREE.Mesh(cylinderGeo, cylinderMat);
             cylinder.position.copy(startPoint).lerp(endPoint, 0.5);
             cylinder.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3().subVectors(endPoint, startPoint).normalize());
-            scene.add(cylinder);
-            setTimeout(() => scene.remove(cylinder), 150);
+scene.add(cylinder);
+            setTimeout(() => { scene.remove(cylinder); cylinderGeo.dispose(); cylinderMat.dispose(); }, 150);
         } else {
             // Sima sárga lézer a többihez
             const laserMat = new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 3 });
-            const laser = new THREE.Line(new THREE.BufferGeometry().setFromPoints([startPoint, endPoint]), laserMat);
+const laserGeo = new THREE.BufferGeometry().setFromPoints([startPoint, endPoint]);
+            const laser = new THREE.Line(laserGeo, laserMat);
             scene.add(laser); 
-            setTimeout(() => scene.remove(laser), 100);
+            setTimeout(() => { scene.remove(laser); laserGeo.dispose(); laserMat.dispose(); }, 100);
         }
         
         // --- SEBZÉS ---
@@ -307,8 +354,13 @@ window.handleShoot = function(e) {
                     if (typeof updateUI === 'function') updateUI();
 
                     if (en.health <= 0) {
-                        playSound('zombieDie');
-                        createBloodStain(en.mesh.position.x, en.mesh.position.z);
+                        // Ha crawler, játssza le a síró hangot, különben a sima zombit
+                        playSound(en.type === 'crawler' ? 'cry' : 'zombieDie');
+                        
+                        // Crawler kill adja az ő 500-as rewardját (és a fejbelövés szorzót is)
+                        score += isHeadshot ? en.reward * 1.5 : en.reward; 
+                      playSound('zombieDie');
+                        if (typeof createToxicPuddle === 'function') createToxicPuddle(en.mesh.position.x, en.mesh.position.z);
                         
                         const particleMat = new THREE.MeshBasicMaterial({ color: 0xaa0000 });
                         for (let i = 0; i < 15; i++) {
@@ -522,67 +574,142 @@ window.addEventListener('contextmenu', (e) => e.preventDefault());
 // 5. JÁTÉK CIKLUS ÉS FRISSÍTÉS
 // ==========================================
 
-window.startWaveCountdown = function() {
-    let countdown = 10;
-    const waveDisplay = document.getElementById('wave-display');
-    if (waveDisplay) { waveDisplay.innerText = `KÉSZÜLJ...JÖNNEK!: ${countdown}mp`; waveDisplay.classList.remove('hidden'); }
+window.startWaveCountdown = function(isFirstWave = false) {
+    // 1. Biztonság: Leállítjuk a korábbi, esetleg beragadt időzítőket!
+    if (window.waveTimeout) clearTimeout(window.waveTimeout);
+    if (window.glitchShakeInterval) clearInterval(window.glitchShakeInterval);
+
+    if (!isFirstWave) {
+        currentWave++; 
+        enemiesToSpawn += 2; 
+    }
+    let bossSpawning = (currentWave % 5 === 0); 
     
-    const waveInterval = setInterval(() => {
-        countdown--;
-        if (countdown > 0) { 
-            if (waveDisplay) waveDisplay.innerText = `KÉSZÜLJ...JÖNNEK!: ${countdown}mp`; 
-        } else {
-            clearInterval(waveInterval); currentWave++; enemiesToSpawn += 2; 
-            let bossSpawning = (currentWave % 5 === 0); 
-            if (typeof spawnEnemy === 'function') {
-                for(let i=0; i<enemiesToSpawn; i++) spawnEnemy(getSafeSpawnPosition(enemyRadius, 10).x, getSafeSpawnPosition(enemyRadius, 10).z, bossSpawning && i===0);
-            }
-            isWaveActive = true; waveStartTime = clock.getElapsedTime(); 
-            if (waveDisplay) { waveDisplay.innerText = `${currentWave}. HULLÁM`; setTimeout(() => waveDisplay.classList.add('hidden'), 2000); }
+    playSound('glitch');
+    
+    const glitchOverlay = document.getElementById('glitch-overlay');
+    const waveDisplay = document.getElementById('wave-display');
+    
+    if (glitchOverlay) {
+        glitchOverlay.classList.remove('hidden');
+        glitchOverlay.classList.add('glitch-active');
+    }
+    
+    if (waveDisplay) {
+        waveDisplay.innerText = "⚠️ TÉRBELI ANOMÁLIA ÉSZLELVE... ⚠️";
+        waveDisplay.style.color = "#ff0000"; 
+        waveDisplay.classList.remove('hidden');
+    }
+
+    // 2. Eltároljuk az interval-t, hogy később le tudjuk állítani
+    window.glitchShakeInterval = setInterval(() => {
+        cameraShake = 0.2;
+    }, 100);
+
+    // 3. Eltároljuk a timeout-ot is!
+    window.waveTimeout = setTimeout(() => {
+        clearInterval(window.glitchShakeInterval); 
+        
+        if (glitchOverlay) {
+            glitchOverlay.classList.remove('glitch-active');
+            glitchOverlay.classList.add('hidden');
         }
-    }, 1000);
+        
+        if (waveDisplay) {
+            waveDisplay.innerText = `${currentWave}. HULLÁM`;
+            waveDisplay.style.color = "#fff"; 
+            setTimeout(() => waveDisplay.classList.add('hidden'), 2000);
+        }
+        
+        if (typeof spawnEnemy === 'function') {
+            for(let i = 0; i < enemiesToSpawn; i++) {
+                spawnEnemy(getSafeSpawnPosition(enemyRadius, 15).x, getSafeSpawnPosition(enemyRadius, 15).z, bossSpawning && i===0);
+            }
+        }
+        
+        isWaveActive = true; 
+        waveStartTime = clock.getElapsedTime(); 
+
+    }, 7000);
 }
 
 window.startGame = function() {
-    if (!zombieModel || !ammoModel || !healthModel || !fastZombieModel || !hiderZombieModel) { 
-        setTimeout(window.startGame, 500); return; 
+    // ÚJ: Kiegészítve a Crawler, Boss és Tank ellenőrzésével!
+    if (!zombieModel || !ammoModel || !healthModel || !fastZombieModel || !hiderZombieModel || !crawlerModel || !bossModel || !tankModel) { 
+        setTimeout(window.startGame, 500); 
+        return; 
     }
+
+    // --- A HIBA JAVÍTÁSA: Azonnal leállítjuk a hullámot, hogy ne nyíljon ki a bolt! ---
+    isWaveActive = false; 
+
+    // Háttérfolyamatok és effektek leállítása
+    if (window.waveTimeout) clearTimeout(window.waveTimeout);
+    if (window.glitchShakeInterval) clearInterval(window.glitchShakeInterval);
     
-    // --- ÚJ: ZENE VÁLTÁS ---
-    // Menü zene leállítása
-    if (sounds['menuMusic'] && sounds['menuMusic'].isPlaying) {
-        sounds['menuMusic'].stop();
+    // Minden felugró ablak kényszerített bezárása
+    const glitchOverlay = document.getElementById('glitch-overlay');
+    if (glitchOverlay) {
+        glitchOverlay.classList.remove('glitch-active');
+        glitchOverlay.classList.add('hidden');
     }
-    // Harci zene elindítása
-    if (sounds['music'] && sounds['music'].buffer && !sounds['music'].isPlaying) {
-        sounds['music'].play();
-    }
+    const waveDisplay = document.getElementById('wave-display');
+    if (waveDisplay) waveDisplay.classList.add('hidden');
+    
+    const shopMenu = document.getElementById('shop-menu');
+    if (shopMenu) shopMenu.classList.add('hidden');
+    // -------------------------------------------------------------
+    
+    // Zene beállítása
+    if (sounds['menuMusic'] && sounds['menuMusic'].isPlaying) sounds['menuMusic'].stop();
+    if (sounds['music'] && sounds['music'].buffer && !sounds['music'].isPlaying) sounds['music'].play();
     
     gameState = 'PLAYING'; 
-    playerHealth = 100; playerArmor = 0; score = 0; currentWave = 1; enemiesToSpawn = 5; currentWeaponId = 'pistol';
+    playerHealth = 100; playerArmor = 0; score = 0; 
+    currentWave = 1; enemiesToSpawn = 5; currentWeaponId = 'pistol'; // VISSZAÁLL 1-RE!
     weapons.pistol.ammo = weapons.pistol.maxAmmo; weapons.pistol.reserve = weapons.pistol.maxReserve;
     
     if (typeof updateUI === 'function') updateUI(); 
-    camera.position.set(0, 1.6, 0); // Visszaállítva biztonságos alapértékre
+    camera.position.set(0, 1.6, 0); 
     
     const radarContainer = document.getElementById('radar');
-    for (let i = 0; i < enemies.length; i++) { 
-        scene.remove(enemies[i].mesh); 
-        if (radarContainer && enemies[i].blip && enemies[i].blip.parentNode) radarContainer.removeChild(enemies[i].blip); 
-    }
-    enemies.length = 0; enemyHitboxes.length = 0; 
-    bloodStains.forEach(b => scene.remove(b)); bloodStains.length = 0;
-    medkits.forEach(mk => scene.remove(mk.mesh)); medkits.length = 0; 
-    ammoBoxes.forEach(ab => scene.remove(ab.mesh)); ammoBoxes.length = 0;
     
-    if(typeof spawnEnemy === 'function') {
-        for (let i = 0; i < enemiesToSpawn; i++) spawnEnemy(getSafeSpawnPosition(enemyRadius, 10).x, getSafeSpawnPosition(enemyRadius, 10).z);
+    // Zombik teljes törlése a pályáról és a memóriából
+    for (let i = 0; i < enemies.length; i++) {
+        // Biztos ami biztos, eltávolítjuk a 3D térből
+        scene.remove(enemies[i].mesh); 
+        
+        // Felszabadítjuk a memóriát
+        enemies[i].mesh.traverse((child) => {
+            if (child.isMesh && child.geometry) child.geometry.dispose();
+        });
+        
+        // Levesszük a radarról
+        if (radarContainer && enemies[i].blip && enemies[i].blip.parentNode) {
+            radarContainer.removeChild(enemies[i].blip); 
+        }
     }
+    // Tömbök nullázása
+    enemies.length = 0; 
+    enemyHitboxes.length = 0; 
+    
+    toxicPuddles.forEach(p => { scene.remove(p); p.geometry.dispose(); }); 
+    toxicPuddles.length = 0;
+    
+    medkits.forEach(mk => { scene.remove(mk.mesh); }); 
+    medkits.length = 0; 
+    
+    ammoBoxes.forEach(ab => { scene.remove(ab.mesh); }); 
+    ammoBoxes.length = 0;
+    
+    // Újra kezdjük a meccset
     if(typeof spawnMedkit === 'function') {
         for (let i = 0; i < 4; i++) spawnMedkit(getSafeSpawnPosition(0.5, 5).x, getSafeSpawnPosition(0.5, 5).z);
         for (let i = 0; i < 4; i++) spawnAmmoBox(getSafeSpawnPosition(0.4, 5).x, getSafeSpawnPosition(0.4, 5).z);
     }
-    isWaveActive = true;
+    
+    // Indítjuk az 1. hullámot a 7 másodperces glitch-el
+    startWaveCountdown(true); 
 }
 
 let currentBob = 0;
@@ -616,6 +743,69 @@ function animate() {
         autoShootTimer = wpn.fireRate;
     }
 
+// --- ÚJ: TOXIKUS POCSOLYA LOGIKA (Tick-alapú, 1mp) ---
+    if (typeof toxicTickTimer !== 'undefined') {
+        toxicTickTimer += delta;
+        if (toxicTickTimer >= 1.0) {
+            toxicTickTimer = 0; // Tick nullázása
+            let playerPuddleCount = 0;
+            
+            // Biztos koordináták lekérése a játékoshoz
+            let px = camera.position.x;
+            let pz = camera.position.z;
+            
+            // 1. Játékos sebzése
+            for (let p of toxicPuddles) {
+                let distSq = Math.pow(px - p.position.x, 2) + Math.pow(pz - p.position.z, 2);
+                // Kisebb távolság: mivel a pocsolya kisebb (sugár kb 1.0), a distSq határ most 1.2
+                if (distSq <= 1.2) {
+                    playerPuddleCount++;
+                }
+            }
+            
+            if (playerPuddleCount > 0) {
+                playerHealth -= (playerPuddleCount * 2); // 2 HP / pocsolya / másodperc
+                if (typeof updateUI === 'function') updateUI();
+                playSound('hurt');
+                
+                const damageFlash = document.getElementById('damage-flash');
+                if (damageFlash) { damageFlash.style.opacity = 0.5; setTimeout(() => damageFlash.style.opacity = 0, 200); }
+                
+                // Halál ellenőrzés a savtól
+                if (playerHealth <= 0) {
+                    if (skills.revive.level > 0) {
+                        skills.revive.level--;
+                        playerHealth = 100 + (skills.maxHealth.level * 20);
+                        invincibilityTimer = 2.0;
+                        playSound('heal');
+                        if (typeof updateShopButtons === 'function') updateShopButtons();
+                    } else if (gameState !== 'GAMEOVER') {
+                        gameState = 'GAMEOVER'; 
+                        document.exitPointerLock(); 
+                        document.getElementById('final-score').innerText = `PÉNZ: ${score}`; 
+                        document.getElementById('final-wave').innerText = `TÚLÉLT HULLÁMOK: ${currentWave}`; 
+                        document.getElementById('game-over').classList.remove('hidden');
+                    }
+                }
+            }
+            
+            // 2. Zombik gyógyítása
+            for (let en of enemies) {
+                let enemyPuddleCount = 0;
+                for (let p of toxicPuddles) {
+                    let distSq = Math.pow(en.mesh.position.x - p.position.x, 2) + Math.pow(en.mesh.position.z - p.position.z, 2);
+                    if (distSq <= 1.2) enemyPuddleCount++; // Nekik is kisebb rádiusz kell
+                }
+                if (enemyPuddleCount > 0) {
+                    let baseStats = difficultySettings[currentDifficulty];
+                    let maxEnemyHP = baseStats.health * en.damageMult;
+                    en.health = Math.min(maxEnemyHP, en.health + (enemyPuddleCount * 1.0));
+                }
+            }
+        }
+    }
+    // --- TOXIKUS LOGIKA VÉGE ---
+
     if (damageCooldown > 0) damageCooldown -= delta;
     if (muzzleFlash.intensity > 0) muzzleFlash.intensity = Math.max(0, muzzleFlash.intensity - delta * 30);
     if (gunMixer) gunMixer.update(delta);
@@ -647,7 +837,8 @@ function animate() {
     if (radarScanner) radarScanner.style.transform = `translate(0, -50%) rotate(${displayAngle}rad)`;
 
     // Bolt nyitása és EGÉR VISSZAADÁSA
-    if (isWaveActive && enemies.length === 0) {
+    // A hullám véget ér, ha már csak a menekülő szörnyek élnek (vagy senki)
+    if (isWaveActive && enemies.filter(e => e.type !== 'crawler').length === 0) {
         isWaveActive = false; 
         let waveDuration = clock.getElapsedTime() - waveStartTime;
         let parTime = enemiesToSpawn * 4; 
@@ -660,6 +851,46 @@ function animate() {
         }
         document.exitPointerLock(); // <-- Visszaadjuk az egeret a bolthoz!
         if (typeof openShop === 'function') openShop(); 
+
+        if (isWaveActive && enemies.filter(e => e.type !== 'crawler').length === 0) {
+        isWaveActive = false; 
+        
+        let waveDuration = clock.getElapsedTime() - waveStartTime;
+        let parTime = enemiesToSpawn * 4; 
+        lastWaveBonus = 0;
+        if (waveDuration < parTime) {
+            let savedSeconds = Math.floor(parTime - waveDuration);
+            lastWaveBonus = savedSeconds * 10;
+            score += lastWaveBonus;
+            if (typeof updateUI === 'function') updateUI();
+        }
+
+        // --- ÚJ TAKARÍTÁS: A túlélő Crawlerek (Loot Goblinok) eltüntetése ---
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            if (enemies[i].type === 'crawler') {
+                let survivor = enemies[i];
+                
+                // 3D modell és hitbox eltávolítása a térből
+                scene.remove(survivor.mesh);
+                let bIdx = enemyHitboxes.indexOf(survivor.bodyHitbox);
+                if (bIdx > -1) enemyHitboxes.splice(bIdx, 1);
+                let hIdx = enemyHitboxes.indexOf(survivor.headHitbox);
+                if (hIdx > -1) enemyHitboxes.splice(hIdx, 1);
+                
+                // Pötty törlése a radarról
+                if (survivor.blip && survivor.blip.parentNode) {
+                    survivor.blip.parentNode.removeChild(survivor.blip);
+                }
+                
+                // Törlés a logikai tömbből
+                enemies.splice(i, 1);
+            }
+        }
+        // --------------------------------------------------------------------
+
+        document.exitPointerLock(); 
+        if (typeof openShop === 'function') openShop(); 
+    }
     }
 
     // Kamera Rázkódás, Visszarúgás és Lépkedés
@@ -720,6 +951,21 @@ function animate() {
     for (let i = 0; i < enemies.length; i++) {
         const en = enemies[i]; 
         
+        en.lifeTime -= delta;
+        if (en.lifeTime <= 0) {
+            // Letelt az idő, a szörny elmenekült! Töröljük nyom nélkül.
+            scene.remove(en.mesh); 
+            let bIdx = enemyHitboxes.indexOf(en.bodyHitbox);
+            if (bIdx > -1) enemyHitboxes.splice(bIdx, 1); 
+            let hIdx = enemyHitboxes.indexOf(en.headHitbox);
+            if (hIdx > -1) enemyHitboxes.splice(hIdx, 1);
+            if (en.blip && en.blip.parentNode) en.blip.parentNode.removeChild(en.blip);
+            
+            enemies.splice(i, 1);
+            i--; // Visszaléptetjük az indexet, mivel töröltünk egyet a tömbből
+            continue; 
+        }
+
         // Ha fagyasztás van, a zombi nem mozog és az animáció is megáll!
         if (activeFreezeTimer > 0) {
             if (en.mixer) en.mixer.timeScale = 0; 
@@ -730,8 +976,69 @@ function animate() {
 
         const distToPlayer = Math.hypot(savedCamX - en.mesh.position.x, camera.position.z - en.mesh.position.z);
  
+       // --- ÚJ: MENEKÜLŐ (CRAWLER) LOGIKA (PATTOGÓ/KAOTIKUS) ---
+        if (en.type === 'crawler') {
+            if (en.mixer) { en.mixer.timeScale = 2.0; en.mixer.update(delta); } 
+            
+            // Ha még nincs saját iránya (velocity), adunk neki egy random irányt
+            if (!en.velocity) {
+                let angle = Math.random() * Math.PI * 2;
+                en.velocity = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle));
+            }
+
+            // Kiszámítjuk, hova lépne
+            let mX = en.velocity.x * en.speed;
+            let mZ = en.velocity.z * en.speed;
+
+            // FONTOS: Visszapattanás a falakról (Biliárd logika)
+            let hitWallX = checkWallCollision(en.mesh.position.x + mX, en.mesh.position.z, enemyRadius);
+            let hitWallZ = checkWallCollision(en.mesh.position.x, en.mesh.position.z + mZ, enemyRadius);
+
+            if (hitWallX) {
+                en.velocity.x *= -1; // Visszapattan X tengelyen
+                mX = en.velocity.x * en.speed;
+            }
+            if (hitWallZ) {
+                en.velocity.z *= -1; // Visszapattan Z tengelyen
+                mZ = en.velocity.z * en.speed;
+            }
+
+            // A játékos is elijeszti (Ha túl közel mész, megváltoztatja az irányát)
+            if (distToPlayer < 8.0) {
+                // Menekülés a játékos elől, de lágyan belekeverve a jelenlegi irányába
+                let flee = new THREE.Vector3().subVectors(en.mesh.position, new THREE.Vector3(savedCamX, 0, camera.position.z)).normalize();
+                en.velocity.lerp(flee, 0.05).normalize(); 
+            }
+
+            // Mozgás alkalmazása
+            en.mesh.position.x += mX;
+            en.mesh.position.z += mZ;
+
+            // A fej forgatása a mozgás irányába (hogy ne oldalazva fusson)
+            en.mesh.lookAt(en.mesh.position.x + en.velocity.x, 0, en.mesh.position.z + en.velocity.z);
+
+            // Radar frissítése kékkel
+            if (en.blip) {
+                const localPos = en.mesh.position.clone(); camera.worldToLocal(localPos);
+                en.blip.style.left = (50 + localPos.x * 1.2) + '%'; en.blip.style.top = (50 + localPos.z * 1.2) + '%';
+                en.blip.style.backgroundColor = '#00ffff'; 
+                en.blip.style.boxShadow = '0 0 8px #00ffff'; // Kicsit világítson a radaron
+                en.blip.classList.add('visible');
+            }
+            continue; // Kihagyja a normál zombi támadást
+        }
        
-        if (distToPlayer <= 3.0) {
+        // 1. Egyedi támadási távolság: A Boss-nak sokkal hosszabb a keze (6.0), a többinek marad a 3.0
+        let attackRange = (en.type === 'boss') ? 6.0 : 3.0;
+        
+        if (distToPlayer <= attackRange) {
+            // TÁMADÁS ANIMÁCIÓ BEKAPCSOLÁSA (Ha van)
+            if (en.attackAction && en.currentAction !== en.attackAction) {
+                en.runAction.fadeOut(0.2);
+                en.attackAction.reset().fadeIn(0.2).play();
+                en.currentAction = en.attackAction;
+            }
+
             const stats = difficultySettings[currentDifficulty];
             let rawDamage = stats.damage * en.damageMult; 
             if (playerArmor > 0) {
@@ -741,9 +1048,34 @@ function animate() {
             if (rawDamage > 0) playerHealth -= rawDamage;
             
             if (typeof updateUI === 'function') updateUI(); 
+            const screenBlood = document.getElementById('screen-blood');
             if (screenBlood) screenBlood.style.opacity = 1.0;
             
-            if (damageCooldown <= 0) { playSound('hurt'); damageCooldown = 1.0; cameraShake = 0.5; } 
+            // Ha épp letelt a sebzés-késleltetés, akkor játsszuk le a fájdalom/ijesztés hangokat
+            if (damageCooldown <= 0) { 
+                damageCooldown = 1.0; 
+                cameraShake = 0.5; 
+                
+                // --- ÚJ: BOSS EFFEKTEK ---
+                if (en.type === 'boss') {
+                    playSound('bossAttack'); // Őrjöngő üvöltés
+                    // Képernyő glitch
+                    const glitchOverlay = document.getElementById('glitch-overlay');
+                    if (glitchOverlay) {
+                        glitchOverlay.classList.remove('hidden');
+                        glitchOverlay.classList.add('glitch-active');
+                        // Fél másodperc után elmúlik a zavar
+                        setTimeout(() => {
+                            glitchOverlay.classList.remove('glitch-active');
+                            glitchOverlay.classList.add('hidden');
+                        }, 500);
+                    }
+                } else {
+                    playSound('hurt'); // Normál zombinál csak te kiáltasz fel
+                }
+            } 
+            
+            // ... (Itt folytatódik a meglévő Halál/Újraéledés (Revive) kódod)
             
 // Halál ÉS Újraéledés (Revive) mechanika
             if (playerHealth <= 0) {
@@ -770,6 +1102,14 @@ function animate() {
             }
         } else {
             const enemyDir = new THREE.Vector3().subVectors(new THREE.Vector3(savedCamX, 0, camera.position.z), en.mesh.position).normalize(); 
+
+            // FUTÁS ANIMÁCIÓ VISSZAKAPCSOLÁSA
+            if (en.attackAction && en.currentAction !== en.runAction) {
+                en.attackAction.fadeOut(0.2);
+                en.runAction.reset().fadeIn(0.2).play();
+                en.currentAction = en.runAction;
+            }
+
             enemyDir.y = 0; en.mesh.lookAt(savedCamX, 0, camera.position.z); 
             
             let sep = new THREE.Vector3();
@@ -811,7 +1151,7 @@ if (Math.hypot(savedCamX - mk.mesh.position.x, camera.position.z - mk.mesh.posit
             
             if (typeof updateUI === 'function') updateUI(); 
             scene.remove(mk.mesh); medkits.splice(i, 1); 
-            setTimeout(() => { if(gameState === 'PLAYING' && typeof spawnMedkit === 'function') spawnMedkit(getSafeSpawnPosition(0.5, 5).x, getSafeSpawnPosition(0.5, 5).z); }, 5000); 
+          setTimeout(() => { if(gameState !== 'MENU' && gameState !== 'GAMEOVER' && typeof spawnMedkit === 'function') spawnMedkit(getSafeSpawnPosition(0.5, 5).x, getSafeSpawnPosition(0.5, 5).z); }, 5000); 
         }
     }
     
@@ -827,14 +1167,18 @@ if (Math.hypot(savedCamX - mk.mesh.position.x, camera.position.z - mk.mesh.posit
             w.reserve = Math.min(w.maxReserve, Math.floor(w.reserve + ammoAmount));
             if (typeof updateUI === 'function') updateUI(); 
             scene.remove(ab.mesh); ammoBoxes.splice(i, 1); 
-            setTimeout(() => { if(gameState === 'PLAYING' && typeof spawnAmmoBox === 'function') spawnAmmoBox(getSafeSpawnPosition(0.4, 5).x, getSafeSpawnPosition(0.4, 5).z); }, 5000); 
+            setTimeout(() => { if(gameState !== 'MENU' && gameState !== 'GAMEOVER' && typeof spawnAmmoBox === 'function') spawnAmmoBox(getSafeSpawnPosition(0.4, 5).x, getSafeSpawnPosition(0.4, 5).z); }, 5000);
         } 
     }
     
-    for (let i = particles.length - 1; i >= 0; i--) { 
+for (let i = particles.length - 1; i >= 0; i--) { 
         let p = particles[i]; p.life -= 0.02; p.vy -= 0.02; 
         p.mesh.position.x += p.vx; p.mesh.position.y += p.vy; p.mesh.position.z += p.vz; 
-        if (p.life <= 0) { scene.remove(p.mesh); particles.splice(i, 1); } 
+        if (p.life <= 0) { 
+            scene.remove(p.mesh); 
+            p.mesh.geometry.dispose(); p.mesh.material.dispose(); // Törlés a VRAM-ból!
+            particles.splice(i, 1); 
+        } 
     }
 
     renderer.render(scene, camera);
