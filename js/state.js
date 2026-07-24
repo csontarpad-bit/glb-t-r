@@ -74,6 +74,17 @@ var zombieModel, zombieAnimations, ammoModel, healthModel;
 var fastZombieModel, fastZombieAnimations;
 var hiderZombieModel, hiderZombieAnimations;
 var crawlerModel, crawlerAnimations;
-// --- ÚJ ---
 var bossModel, bossAnimations;
 var tankModel, tankAnimations;
+
+var globalRaycaster = new THREE.Raycaster();
+
+// --- ÚJ: OBJECT POOLS ---
+var bloodPool = [];
+var laserPool = [];
+
+// --- ÚJ: MUTÁNS NÖVÉNY (FLESH BOMB) VÁLTOZÓK ---
+var plantModel, plantAnimations;
+var activePlants = []; 
+var druggedTimer = 0;       // Meddig tart a drog hatás
+var druggedTickTimer = 0;   // Másodperc számláló a sebzéshez
