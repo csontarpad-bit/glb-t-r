@@ -44,8 +44,15 @@ window.openShop = function() {
 
 document.getElementById('close-shop-btn').addEventListener('click', () => {
     shopMenu.classList.add('hidden');
-    gameState = 'PLAYING'; // Játék folytatása
-    document.body.requestPointerLock(); // <-- ÚJ: Azonnal visszazárja az egeret!
+    gameState = 'PLAYING'; 
+    
+    // CSAK PC-n kérjük el az egeret, mobilon ez hibát dobna!
+    if (window.innerWidth > 768) {
+        try { document.body.requestPointerLock(); } catch(e){}
+    }
+    
+    // ITT CSAK A VISSZASZÁMLÁLÓT INDÍTJUK EL! 
+    // Az öregedés már a visszaszámláló BELSŐ logikájában fog lefutni!
     if (typeof startWaveCountdown === 'function') startWaveCountdown(); 
 });
 
@@ -167,7 +174,7 @@ btn.onclick = () => upgradeSkill(id);
     const cleanBtn = document.getElementById('buy-clean');
     if (cleanBtn) {
         let amountToClean = Math.min(10, toxicPuddles.length); // Max 10, vagy ami maradt
-        let cost = amountToClean * 1; // 1 CR / pocsolya
+        let cost = amountToClean * 10; // 10 CR / pocsolya
         
         if (toxicPuddles.length === 0) {
             cleanBtn.innerHTML = getBtnHTML("STERILIZÁLÁS", "A pálya tiszta.", "ÁR: 0 CR");
@@ -185,6 +192,7 @@ btn.onclick = () => upgradeSkill(id);
                     scene.remove(oldestPuddle);
                     oldestPuddle.geometry.dispose(); // MEMÓRIA FELSZABADÍTÁS!
                 }
+                updateToxicFog();
                 if (typeof playSound === 'function') playSound('heal');
                 updateShopButtons(); 
             } else {
@@ -235,11 +243,19 @@ function handleWeaponSwitch(e) {
 document.getElementById('start-game-btn').addEventListener('click', (e) => {
     e.preventDefault();
     
-    // Teljes képernyő kérése
+    // Teljes képernyő és Egér bezárás (Biztonságosan, hogy ne omoljon össze a kód)
     let elem = document.documentElement;
-    if (elem.requestFullscreen) elem.requestFullscreen().catch(e=>{});
-    else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
-     document.body.requestPointerLock();
+    try {
+        if (elem.requestFullscreen) elem.requestFullscreen().catch(err => console.log("Fullscreen hiba:", err));
+        else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+        
+        // Csak akkor zárjuk be az egeret, ha nem mobilon vagyunk
+        if (window.innerWidth > 768) {
+            document.body.requestPointerLock();
+        }
+    } catch (err) {
+        console.warn("Pointer lock figyelmeztetés:", err);
+    }
     // --- ÚJ: FADE ÁTMENET ÉS ELALVÁS ---
     const fadeOverlay = document.getElementById('fade-overlay');
     if (fadeOverlay) fadeOverlay.style.opacity = '1';
@@ -277,3 +293,21 @@ document.getElementById('restart-btn').addEventListener('click', (e) => {
     document.getElementById('main-menu').classList.remove('hidden');
     gameState = 'MENU';
 });
+
+// --- ÚJ: PAJZS IKON MEGJELENÍTÉSE ---
+window.showShieldIcon = function(shieldType) {
+    const shieldIcon = document.getElementById('shield-icon');
+    if (!shieldIcon) return;
+
+    shieldIcon.classList.remove('hidden');
+    
+    // Színezés a pocsolya állapota alapján
+    if (shieldType === 'ready') shieldIcon.style.filter = 'hue-rotate(150deg) saturate(300%) brightness(150%)'; // Pirosas
+    else if (shieldType === 'yellow') shieldIcon.style.filter = 'hue-rotate(220deg) saturate(300%)'; // Sárgás
+    else shieldIcon.style.filter = 'hue-rotate(0deg) saturate(200%)'; // Alap (Zöldes)
+
+    // Újraindítjuk az animációt
+    shieldIcon.classList.remove('shield-anim'); 
+    void shieldIcon.offsetWidth; 
+    shieldIcon.classList.add('shield-anim');
+}
