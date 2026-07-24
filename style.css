@@ -345,3 +345,54 @@ body { margin: 0; overflow: hidden; background: #000; touch-action: none; user-s
     75% { opacity: 0.8; background: rgba(0, 255, 255, 0.1); }
     100% { opacity: 0.1; background: rgba(0, 255, 0, 0.1); }
 }
+
+/* ==========================================
+   BRUTÁLIS DROG / MÉRGEZÉS EFFEKT
+   ========================================== */
+/* Ezt az osztályt egyenesen a <body>-ra tesszük rá, így a teljes 3D teret és a HUD-ot is eltorzítja! */
+body.drugged {
+    animation: badTrip 2.5s infinite alternate ease-in-out;
+    /* Picit ránagyítunk, hogy a rángatózásnál ne lógjon ki a fekete háttér */
+    transform-origin: center center;
+}
+
+@keyframes badTrip {
+    0% { 
+        filter: blur(2px) hue-rotate(45deg) saturate(200%); 
+        transform: scale(1.05) translate(10px, 5px) rotate(1deg); 
+    }
+    33% { 
+        filter: blur(6px) hue-rotate(-45deg) saturate(300%); 
+        transform: scale(1.15) translate(-15px, -10px) rotate(-2deg); 
+    }
+    66% { 
+        filter: blur(3px) hue-rotate(90deg) saturate(150%); 
+        transform: scale(1.1) translate(15px, 15px) skewX(3deg); 
+    }
+    100% { 
+        filter: blur(8px) hue-rotate(-90deg) saturate(400%); 
+        transform: scale(1.2) translate(-10px, -5px) skewY(-3deg); 
+    }
+}
+
+/* PAJZS IKON ANIMÁCIÓ */
+#shield-icon {
+    position: absolute; 
+    top: 50%; left: 50%; 
+    transform: translate(20px, -20px); /* Kicsit feljebb és jobbra a célkereszttől */
+    font-size: 24px;
+    z-index: 50; 
+    pointer-events: none;
+    text-shadow: 0 0 10px rgba(255,255,255,0.8);
+}
+
+.shield-anim {
+    animation: shieldPop 0.4s ease-out forwards;
+}
+
+@keyframes shieldPop {
+    0% { transform: translate(20px, -20px) scale(0.5); opacity: 1; }
+    50% { transform: translate(30px, -30px) scale(1.5); opacity: 1; }
+    100% { transform: translate(40px, -40px) scale(1.0); opacity: 0; }
+}
+
